@@ -1,0 +1,134 @@
+#
+#  Copyright (c) 2014, McAfee, Inc.
+#  
+#  All rights reserved.
+#  
+#  Redistribution and use in source and binary forms, with or without modification,
+#  are permitted provided that the following conditions are met:
+#  
+#  Redistributions of source code must retain the above copyright notice, this list
+#  of conditions and the following disclaimer.
+#  
+#  Redistributions in binary form must reproduce the above copyright notice, this
+#  list of conditions and the following disclaimer in the documentation and/or other
+#  materials provided with the distribution.
+#  
+#  Neither the name of McAfee, Inc. nor the names of its contributors may be used
+#  to endorse or promote products derived from this software without specific prior
+#  written permission.
+#  
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+#  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+#  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+#  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+#  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+#  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+#  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+#  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+#  OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+#  OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+
+Install following packages to the rootstrap
+and setup the build environment
+*************************
+dbus (Version 1.6.4)
+dbus-glib (Version 0.100)
+glib (Version 2.32.3)
+gobject (Version 2.32.3)
+dlog (Version 1.0)
+
+Compiling for multiple architectures
+*************************
+DEVICE(arm) - use test/scripts/PrepareForDevice.sh
+EMULATOR(x86) - use test/scripts/PrepareForEmul.sh
+
+1. Tizen Content Screening Framework [SUPPORTED ON DEVICE]
+============================================
+(export script . ./test/scripts/PrepareForDevice.sh)
+
+  1.1 Building the framework library for device:
+  ======================
+  - cd framework (change your current folder to 'framework')
+  - make clean; 
+  - make
+  - The library can be found at 'lib/libsecfw.so'
+
+  1.2 Testing Tizen content screening framework library
+  ======================
+  - cd test (change your current folder to 'test')
+  - Connect your test device (not support emulator)
+  - chmod +x ./scripts/MfeToDevice.sh (optional)
+  - ./scripts/MfeToDevice.sh
+  - sdb -d shell (make sure you have enough privilege to write or read all folders under /opt/)
+  - cd /tmp/tcs_test
+  - chmod +x ./Test.sh (optional)
+  - ./Test.sh
+
+  1.3 Test Tizen Web Protection framework library
+  ======================
+  - cd test (change your current folder to 'test')
+  - Connect your test device (not support emulator)
+  - chmod +x ./scripts/MfeWPToDevice.sh (optional)
+  - ./scripts/MfeWPToDevice.sh
+  - sdb shell (make sure you have enough privilege to write or read all folders under /opt/)
+  - cd /tmp/twp_test
+  - chmod +x ./Test.sh (optional)
+  - ./Test.sh
+
+2. Tizen Security Services [SUPPORTED ON EMULATOR]
+============================================
+(export script . ./test/scripts/PrepareForEmul.sh)
+(cd framework/ (change your current folder to 'framework'))
+  
+  2.1 Building the framework library for emulator:
+  ======================
+  - make clean; 
+  - make
+  - The library can be found at 'lib/libsecfw.so'
+
+  2.2 Building IPC Client library
+  ======================
+  - make -f Makefile_channel_client clean
+  - make -f Makefile_channel_client
+  - The library can be found at 'lib/libscclient.so'
+
+  2.3 Building IPC Server library
+  ======================
+  - make -f Makefile_channel_server clean;
+  - make -f Makefile_channel_server
+  - The library can be found at 'lib/libscserver.so'
+
+  2.4 Building Plugin control service
+  ======================
+  - make -f Makefile_TPCSSerDaemon clean;
+  - make -f Makefile_TPCSSerDaemon
+  - The binary can be found at 'bin/TPCSSerDaemon'
+
+  2.5 Building Web protection control service
+  ======================
+  - make -f Makefile_TWPSerDaemon clean
+  - make -f Makefile_TWPSerDaemon
+  - The binary can be found at 'bin/TWPSerDaemon'
+
+  2.6 Testing Plugin control service
+  ======================
+  -cd test (change your folder to test)
+  -Start the emulator
+  -chmod +x ./scripts/MfeTPCSSerDaemonToEmul.sh
+  -sdb -e shell (make sure you have enough privilege to write or read all folders under /opt/, /usr/bin/ and /tmp)
+  -cd /usr/bin
+  -chmod +x ./Test.sh
+  - ./Test.sh
+  - ./tpcsserdaemontest
+
+  2.7 Testing Web protection control service
+  ======================
+  -cd test (change your folder to test)
+  -Start the emulator
+  -chmod +x ./scripts/MfeTWPSerDaemonToEmul.sh
+  -sdb -e shell (make sure you have enough privilege to write or read all folders under /opt/, /tmp)
+  -cd /usr/bin
+  -chmod +x ./Test.sh
+  - ./Test.sh
+  - ./twpserdaemontest

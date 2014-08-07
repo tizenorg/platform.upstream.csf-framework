@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Manifest xmlns="http://schemas.tizen.org/2012/06/manifest">
+	<Id>z7097a278m</Id>
+	<Version>1.0.0</Version>
+	<Type>C++App</Type>
+	<Vendors>
+		<Vendor Locale="eng-GB">Samsung Electronics</Vendor>
+		<Vendor Locale="kor-KR">삼성전자</Vendor>
+	</Vendors>
+	<Descriptions>
+		<Description Locale="eng-US">Security service.</Description>
+	</Descriptions>
+	<Apps>
+		<UiApp>
+			<Categories>
+				<Category>http://tizen.org/category/antivirus</Category>
+			</Categories>
+		</UiApp>
+		<Secret>AA43CFC79D2AF5A3F7064553C8BF2B2F</Secret>
+		<Privileges/>
+		<ApiVersion>2.1</ApiVersion>
+		<ServiceApp SystemService="True" ExecutableName="osp-security-service" Default="True" AutoRestart="True">
+			<Names>
+				<Name Locale="eng-GB">Native Security Service</Name>
+			</Names>
+			<Icons/>
+			<AppControls/>
+			<LaunchConditions/>
+			<Notifications/>
+		</ServiceApp>
+	</Apps>
+</Manifest>
