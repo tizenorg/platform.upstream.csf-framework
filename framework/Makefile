@@ -33,7 +33,7 @@ OUTDIR = lib
 TARGET = $(OUTDIR)/libsecfw.so
 SRCDIR = .
 INCLUDE = -I. $(TCS_INC) -I../plugin
-LD_FLAGS := $(LD_FLAGS) -ldl
+LD_FLAGS := $(LD_FLAGS) -ldl -lpthread -ltzplatform-config-1.0
 
 ifeq ($(TCS_CC), )
 	CC = gcc
@@ -68,29 +68,31 @@ SOURCES = $(SRCDIR)/TCSImpl.c $(SRCDIR)/TWPImpl.c
 
 OBJECTS = $(OUTDIR)/TCSImpl.o $(OUTDIR)/TWPImpl.o
 
-MKDEP = mkdep -f .depend
-
+#MKDEP = mkdep -f .depend
 
 $(OUTDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -o $(OUTDIR)/$*.o -c $(SRCDIR)/$*.c
 
-all: $(OUTDIR) .depend $(TARGET)
+#all: $(OUTDIR) .depend $(TARGET)
+all: $(OUTDIR) $(TARGET)
 
-.depend: $(SOURCES)
-	$(MKDEP) $(CFLAGS) $(SOURCES)
+#.depend: $(SOURCES)
+#	$(MKDEP) $(CFLAGS) $(SOURCES)
+
+#$(TARGET): $(OBJECTS)
+#	$(LD) -shared -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS)
 
 $(TARGET): $(OBJECTS)
-	$(LD) -shared -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS)
-
+#	$(LD) -shared -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS)
+	$(CC) -shared -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS)
 #	$(AR) -cr $(TARGET) $(OBJECTS)
-
-	$(STRIP) $(TARGET)
+#	$(STRIP) $(TARGET)
 
 $(OUTDIR):
 	@mkdir $(OUTDIR)
 
 distclean: clean
-	@rm -f .depend
+#	@rm -f .depend
 	@rm -rf $(OUTDIR)
 
 clean:
@@ -98,5 +100,4 @@ clean:
 	@rm -f $(OBJECTS) *~
 	@rm -f *.bb *.bbg *.da *.gcov
 
--include .depend
-
+#-include .depend

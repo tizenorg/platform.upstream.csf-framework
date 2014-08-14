@@ -1,0 +1,6 @@
+* Thu Aug 14 2014 John L. Whiteman <john.l.whiteman@intel.com> upstream/2.0.2-1-gf74ac25
+- Fixed the HTTP test code for TWP testing per Samsung report
+
+* Thu Aug 07 2014 John L. Whiteman <john.l.whiteman@intel.com> upstream/2.0.1-1-g2af60fc
+- Initial commit of Content Security Framework (CSF)
+
