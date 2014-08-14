@@ -46,7 +46,7 @@ extern "C" {
 
 #define TCS_META_MAX 1000
 
-#define TCS_FRAMEWORK_VERSION "2.0.1"
+#define TCS_FRAMEWORK_VERSION "2.0.2"
 
 #define TCS_SA_SCANONLY 1 /* Instructs the scan functions to perform scanning only. */
 

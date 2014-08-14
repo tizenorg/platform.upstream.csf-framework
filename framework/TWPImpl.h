@@ -53,7 +53,7 @@ typedef struct TWPLibHandle_struct *TWPLIB_HANDLE;
 
 #define TWP_META_MAX 1000
 
-#define TWP_FRAMEWORK_VERSION "2.0.1"
+#define TWP_FRAMEWORK_VERSION "2.0.2"
 
 #define TWPAPI_VERSION 1 /* SDK version */
 

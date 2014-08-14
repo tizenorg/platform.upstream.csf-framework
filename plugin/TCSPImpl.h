@@ -5,10 +5,10 @@
 extern "C" {
 #endif
 
-#define TCSP_PLUGIN_VERSION "2.0.1"
+#define TCSP_PLUGIN_VERSION "2.0.2"
 #define TCSP_PLUGIN_INFO "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
         <Root><Plug>\n\
-        <Version>2.0.1</Version>\n\
+        <Version>2.0.2</Version>\n\
         <VendorName>McAfee</VendorName>\n\
         <ProductName>TPCS</ProductName>\n\
         <AppId>EmbkcJFK7q</AppId>\n\

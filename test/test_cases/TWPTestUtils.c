@@ -223,6 +223,8 @@ static int CbHttpRead(void *pPrivate, void *pData, int iSize)
 
     memcpy(pData, pCtx->pData + pCtx->uRead, uToRead);
 
+    pCtx->uRead += uToRead;
+
     return (int) uToRead;
 }
 
@@ -255,6 +257,8 @@ static TWP_RESULT HttpSend(TRequest *pCtx, const void *pData, unsigned int uLeng
 
     pCtx->pData = (char *) pData;
     pCtx->uLength = uLength;
+
+    pCtx->uRead = 0;
 
     iRet = XmHttpExec(pCtx->hHttp, "POST", pCtx->pszUrl, &HttpCb, pCtx);
 
