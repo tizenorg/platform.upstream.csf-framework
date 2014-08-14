@@ -33,7 +33,7 @@ OUTDIR = bin
 TARGET = $(OUTDIR)/TWPSerDaemon
 SRCDIR = .
 INCLUDE = -I. $(TCS_INC) -I../plugin
-LD_FLAGS := $(LD_FLAGS) -ldl -lpthread -lsecfw -lscserver  -lpthread -lm -Llib
+LD_FLAGS := $(LD_FLAGS) -ldl -lpthread -lsecfw -lscserver -lm -Llib -ltzplatform-config-1.0
 
 ifeq ($(TCS_CC), )
 	CC = gcc
@@ -70,7 +70,7 @@ SOURCES = $(SRCDIR)/TWPSerDaemon.c \
 OBJECTS = $(OUTDIR)/TWPSerDaemon.o \
 		$(OUTDIR)/IpcForkDaemon.o
 
-MKDEP = mkdep -f .depend
+#MKDEP = mkdep -f .depend
 
 # Define a list of pkg-config packages we want to use
 pkg_packages = dbus-glib-1 dlog
@@ -87,20 +87,22 @@ PKGCFLAGS += -Wall -I$(SRCDIR) $(PKCL_CFLAGS) $(GBS_CFLAGS) $(PKG_CFLAGS)
 $(OUTDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(PKGCFLAGS) -I. -o $(OUTDIR)/$*.o -c $(SRCDIR)/$*.c
 
-all: $(OUTDIR) .depend $(TARGET)
+#all: $(OUTDIR) .depend $(TARGET)
+all: $(OUTDIR) $(TARGET)
 
-.depend: $(SOURCES)
-	$(MKDEP) $(CFLAGS) $(SOURCES)
+#.depend: $(SOURCES)
+#	$(MKDEP) $(CFLAGS) $(SOURCES)
 
 $(TARGET): $(OBJECTS)
-	$(LD) -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS) $(PKGLD_FLAGS)
+#	$(LD) -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS) $(PKGLD_FLAGS)
+	$(CC) -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS) $(PKGLD_FLAGS)
 #	$(STRIP) $(TARGET)
 
 $(OUTDIR):
 	@mkdir $(OUTDIR)
 
 distclean: clean
-	@rm -f .depend
+#	@rm -f .depend
 	@rm -rf $(OUTDIR)
 
 clean:
@@ -108,4 +110,5 @@ clean:
 	@rm -f $(OBJECTS) *~
 	@rm -f *.bb *.bbg *.da *.gcov
 
--include .depend
+#-include .depend
+
