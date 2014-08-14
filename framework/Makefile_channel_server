@@ -32,7 +32,7 @@
 OUTDIR = lib
 TARGET = $(OUTDIR)/libscserver.so
 SRCDIR = .
-LD_FLAGS := $(LD_FLAGS) -ldl
+LD_FLAGS := $(LD_FLAGS) -ldl -lpthread -ltzplatform-config-1.0
 
 ifeq ($(TCS_CC), )
 	CC = gcc
@@ -81,22 +81,13 @@ OBJECTS = $(OUTDIR)/IpcServer.o \
 		$(OUTDIR)/IpcServerError.o \
 			$(OUTDIR)/IpcThrdPool.o
 
-MKDEP = mkdep -f .depend
-
 $(OUTDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -o $(OUTDIR)/$*.o -c $(SRCDIR)/$*.c
 
-all: $(OUTDIR) .depend $(TARGET)
-
-.depend: $(SOURCES)
-	$(MKDEP) $(CFLAGS) $(SOURCES)
+all: $(OUTDIR) $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(LD) -shared -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS)
-
-#	$(AR) -cr $(TARGET) $(OBJECTS)
-
-#	$(STRIP) $(TARGET)
+	$(CC) -shared -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS)
 
 $(OUTDIR):
 	@mkdir $(OUTDIR)
@@ -106,12 +97,9 @@ install: all
 	cp ${TARGET} ${DESTDIR}/bin/
 
 distclean: clean
-	@rm -f .depend
-#	@rm -rf $(OUTDIR)
+	@rm -rf $(OUTDIR)
 
 clean:
 	@rm -f $(TARGET)
 	@rm -f $(OBJECTS) *~
 	@rm -f *.bb *.bbg *.da *.gcov
-
--include .depend
