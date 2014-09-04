@@ -1,0 +1,11 @@
+[Unit]
+Description=CSF Tizen Web Protection Service Daemon (TWPSerDaemon)
+
+[Service]
+Type=dbus
+ExecStart=/bin/TWPSerDaemon
+BusName=com.tsc.ipc.server.wp
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
