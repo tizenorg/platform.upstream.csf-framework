@@ -33,7 +33,7 @@ OUTDIR = bin
 TARGET = $(OUTDIR)/TWPSerDaemon
 SRCDIR = .
 INCLUDE = -I. $(TCS_INC) -I../plugin
-LD_FLAGS := $(LD_FLAGS) -ldl -lpthread -lsecfw -lscserver -lm -Llib -ltzplatform-config-1.0
+LD_FLAGS := $(LD_FLAGS) -ldl -lpthread -lsecfw -lscserver -lm -Llib $(shell pkg-config --libs libtzplatform-config)
 
 ifeq ($(TCS_CC), )
 	CC = gcc

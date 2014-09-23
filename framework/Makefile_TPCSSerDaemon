@@ -32,7 +32,7 @@
 OUTDIR = bin
 TARGET = $(OUTDIR)/TPCSSerDaemon
 SRCDIR = .
-LD_FLAGS := $(LD_FLAGS) -ldl -ltzplatform-config-1.0
+LD_FLAGS := $(LD_FLAGS) -ldl $(shell pkg-config --libs libtzplatform-config)
 
 ifeq ($(TCS_CC), )
 	CC = gcc

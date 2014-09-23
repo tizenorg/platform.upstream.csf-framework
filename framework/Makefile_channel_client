@@ -32,7 +32,7 @@
 OUTDIR = lib
 TARGET = $(OUTDIR)/libscclient.so
 SRCDIR = .
-LD_FLAGS := $(LD_FLAGS) -ldl -lpthread -ltzplatform-config-1.0
+LD_FLAGS := $(LD_FLAGS) -ldl -lpthread $(shell pkg-config --libs libtzplatform-config)
 
 ifeq ($(TCS_CC), )
 	CC = gcc

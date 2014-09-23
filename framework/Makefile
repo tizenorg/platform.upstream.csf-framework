@@ -33,7 +33,7 @@ OUTDIR = lib
 TARGET = $(OUTDIR)/libsecfw.so
 SRCDIR = .
 INCLUDE = -I. $(TCS_INC) -I../plugin
-LD_FLAGS := $(LD_FLAGS) -ldl -lpthread -ltzplatform-config-1.0
+LD_FLAGS := $(LD_FLAGS) -ldl -lpthread $(shell pkg-config --libs libtzplatform-config)
 
 ifeq ($(TCS_CC), )
 	CC = gcc
