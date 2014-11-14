@@ -47,8 +47,9 @@ make -f Makefile_TWPSerDaemon all
 
 %install
 rm -rf %{buildroot}
-mkdir -p %{buildroot}%{_bindir}/
-mkdir -p %{buildroot}%{_libdir}/systemd/system
+mkdir -p %{buildroot}%{_bindir}
+mkdir -p %{buildroot}%{_libdir}
+mkdir -p %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}/%{_sysconfdir}/dbus-1/system.d
 install -D framework/lib/libsecfw.so %{buildroot}%{_libdir}/
 install -D framework/lib/libscclient.so %{buildroot}%{_libdir}/
@@ -57,8 +58,8 @@ install -D framework/bin/TPCSSerDaemon %{buildroot}%{_bindir}/
 install -D framework/bin/TWPSerDaemon %{buildroot}%{_bindir}/
 install -m0644 %{SOURCE1002} %{buildroot}%{_sysconfdir}/dbus-1/system.d/
 install -m0644 %{SOURCE1003} %{buildroot}%{_sysconfdir}/dbus-1/system.d/
-install -m0644 %{SOURCE1004} %{buildroot}%{_libdir}/systemd/system/
-install -m0644 %{SOURCE1005} %{buildroot}%{_libdir}/systemd/system/
+install -m0644 %{SOURCE1004} %{buildroot}%{_unitdir}
+install -m0644 %{SOURCE1005} %{buildroot}%{_unitdir}
 
 %post
 /sbin/ldconfig
@@ -98,5 +99,5 @@ rm -fr /usr/bin/tpcs_config.xml
 %defattr(0644,root,root)
 %config %{_sysconfdir}/dbus-1/system.d/com.tsc.ipc.server.plugin.conf
 %config %{_sysconfdir}/dbus-1/system.d/com.tsc.ipc.server.wp.conf
-%{_libdir}/systemd/system/tpcsserdaemon.service
-%{_libdir}/systemd/system/twpserdaemon.service
+%{_unitdir}/tpcsserdaemon.service
+%{_unitdir}/twpserdaemon.service
