@@ -203,7 +203,8 @@ int IpcServerAddMethod(TSC_SERVER_HANDLE hServer, IpcServerMethod *pMethod)
 	IpcServerMethod* tpMethod = calloc(1, sizeof(IpcServerMethod));
 	if (tpMethod == NULL)
 	{
-	    return -1;
+	   free(pList); 
+	   return -1;
 	}
 	// Copy method
 
