@@ -62,42 +62,19 @@ else
 	CFLAGS := -g -fPIC $(INCLUDE) -DUNIX -DDEBUG $(CFLAGS)
 endif
 
-CFLAGS := $(CFLAGS) $(PKCL_CFLAGS) $(TCS_CFLAGS) -Wall -Werror
-
-# Define a list of pkg-config packages we want to use
-pkg_packages = dlog
-
-PKG_CFLAGS  = $(shell pkg-config --cflags $(pkg_packages))
-PKG_LDFLAGS = $(shell pkg-config --libs $(pkg_packages))
-
-# Combine user supplied, additional, and pkg-config flags
-ifeq ($(TCS_CFG), release)
-	PKGLD_FLAGS = 
-	PKGCFLAGS =
-else
-	PKGLD_FLAGS += $(PKG_LDFLAGS) -L./lib
-	PKGCFLAGS += -Wall -I$(SRCDIR) $(PKCL_CFLAGS) $(PKG_CFLAGS)
-endif
+CFLAGS := $(CFLAGS) $(PKCL_CFLAGS) $(TCS_CFLAGS)
 
 SOURCES = $(SRCDIR)/TCSImpl.c $(SRCDIR)/TWPImpl.c
 
 OBJECTS = $(OUTDIR)/TCSImpl.o $(OUTDIR)/TWPImpl.o
 
 $(OUTDIR)/%.o: $(SRCDIR)/%.c
-	$(CC) $(CFLAGS) $(PKGCFLAGS) -I. -o $(OUTDIR)/$*.o -c $(SRCDIR)/$*.c
+	$(CC) $(CFLAGS) -o $(OUTDIR)/$*.o -c $(SRCDIR)/$*.c
 
 all: $(OUTDIR) $(TARGET)
 
 $(TARGET): $(OBJECTS)
-<<<<<<< HEAD
-	$(LD) -shared -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS) $(PKGLD_FLAGS)
-
-#	$(AR) -cr $(TARGET) $(OBJECTS)
-
-	$(STRIP) $(TARGET)
-=======
 	$(CC) -shared -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS)
->>>>>>> Fixed the HTTP test code for TWP testing per Samsung report
 
 $(OUTDIR):
 	@mkdir $(OUTDIR)

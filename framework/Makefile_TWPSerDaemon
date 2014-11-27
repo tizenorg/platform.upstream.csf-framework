@@ -62,7 +62,7 @@ else
 	CFLAGS := -g -fPIC $(INCLUDE) -DUNIX -DDEBUG $(CFLAGS)
 endif
 
-CFLAGS := $(CFLAGS) $(PKCL_CFLAGS) $(TCS_CFLAGS) -Wall -Werror
+CFLAGS := $(CFLAGS) $(PKCL_CFLAGS) $(TCS_CFLAGS)
 
 SOURCES = $(SRCDIR)/TWPSerDaemon.c \
 		$(SRCDIR)/IpcForkDaemon.c 
@@ -71,11 +71,7 @@ OBJECTS = $(OUTDIR)/TWPSerDaemon.o \
 		$(OUTDIR)/IpcForkDaemon.o
 
 # Define a list of pkg-config packages we want to use
-ifeq ($(TCS_CFG), release)
-	pkg_packages = dbus-glib-1
-else
-	pkg_packages = dbus-glib-1 dlog
-endif
+pkg_packages = dbus-glib-1 dlog
 
 PKG_CFLAGS  = $(shell pkg-config --cflags $(pkg_packages))
 PKG_LDFLAGS = $(shell pkg-config --libs $(pkg_packages))
@@ -104,8 +100,3 @@ clean:
 	@rm -f $(TARGET)
 	@rm -f $(OBJECTS) *~
 	@rm -f *.bb *.bbg *.da *.gcov
-<<<<<<< HEAD
-
--include .depend
-=======
->>>>>>> Fixed the HTTP test code for TWP testing per Samsung report

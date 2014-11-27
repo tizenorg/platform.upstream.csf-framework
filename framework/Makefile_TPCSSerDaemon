@@ -71,7 +71,7 @@ PKG_LDFLAGS = $(shell pkg-config --libs $(pkg_packages))
 LD_FLAGS += $(PKG_LDFLAGS) -lscserver -L./lib -lxml2
 
 GBS_CFLAGS = -I${SYSROOT}/usr/include/dbus-1.0 -I${SYSROOT}/usr/lib/dbus-1.0/include -I${SYSROOT}/usr/include/libxml2
-CFLAGS += -Wall -Werror -I$(SRCDIR) $(PKCL_CFLAGS) $(GBS_CFLAGS) $(PKG_CFLAGS)
+CFLAGS += -Wall -I$(SRCDIR) $(PKCL_CFLAGS) $(GBS_CFLAGS) $(PKG_CFLAGS)
 
 SOURCES = $(SRCDIR)/TPCSSerDaemon.c \
 		$(SRCDIR)/IpcForkDaemon.c
@@ -85,15 +85,7 @@ $(OUTDIR)/%.o: $(SRCDIR)/%.c
 all: $(OUTDIR) $(TARGET)
 
 $(TARGET): $(OBJECTS)
-<<<<<<< HEAD
-	$(LD) -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS) $(PKG_LDFLAGS)
-
-#	$(AR) -cr $(TARGET) $(OBJECTS)
-
-#	$(STRIP) $(TARGET)
-=======
 	$(CC) -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS)
->>>>>>> Fixed the HTTP test code for TWP testing per Samsung report
 
 $(OUTDIR):
 	@mkdir $(OUTDIR)
