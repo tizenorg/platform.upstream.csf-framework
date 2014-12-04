@@ -230,7 +230,6 @@ int IpcServerAddMethod(TSC_SERVER_HANDLE hServer, IpcServerMethod *pMethod)
 int IpcServerRemoveMethod(TSC_SERVER_HANDLE hServer, METHODFUNC method)
 {
     IpcServerInfo *pInfo = NULL;
-    IpcServerMethodList *pList = NULL;
     IpcServerMethodList **pPrev = NULL;
     IpcServerMethodList *pCurr = NULL;
     int r = TSC_ERROR_REMOVE_METHOD_NOT_FOUND;
