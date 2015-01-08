@@ -29,6 +29,7 @@
 #define CONFIG_FILE_NEW_W_PATH "/usr/bin/tpcs_config_new.xml"
 #define SYSLINK_PLUG_PATH "/lib/plugin"
 #define ACTIVE_NONE "None"
+#define APP_ID_NULL ""
 #define CONFIG_DEFAULT_STRING "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
     <!DOCTYPE TPCSConfig SYSTEM \"tpcs_config.dtd\">\n\
     <TPCSConfig>\n\

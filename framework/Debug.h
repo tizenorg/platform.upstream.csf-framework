@@ -45,10 +45,9 @@ extern "C" {
 
 #define LOG_TAG "CS_FRAMEWORK"
 
+#ifdef DEBUG
 #include <dlog/dlog.h>
 
-
-#ifdef DEBUG
 #define DLOG(prio, fmt, arg...) \
     do { SLOG(prio, LOG_TAG, fmt, ##arg); } while(0);
 

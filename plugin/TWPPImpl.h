@@ -87,6 +87,8 @@ TWP_RESULT TWPPCheckURL(const char *pUrl, char **ppBlkUrl, unsigned int *puBlkUr
 
 const char *TWPPGetVersion(void);
 
+const char *TWPPGetInfo(void);
+
 #ifdef __cplusplus
 }
 #endif 

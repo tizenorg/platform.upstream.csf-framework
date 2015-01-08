@@ -85,7 +85,7 @@ int _CreateClientCallHandle(ClientCallHandle **ppHandle, const char *szPrefix, d
         if (!pHandle)
             break;
 
-        if (iRet = _AssignToClientCallHandle(pHandle, szPrefix, serial, pPendingCall))
+        if ((iRet = _AssignToClientCallHandle(pHandle, szPrefix, serial, pPendingCall)))
             break;
 
         *ppHandle = pHandle;
@@ -129,7 +129,7 @@ SharedData *_CreateSharedData(const char *szCallHandlePrefix, DBusMessage *pMsg)
         if (!pMsg)
             break;
 
-        if ((pSharedData = (SharedData *)malloc(sizeof(SharedData))) == NULL)
+        if ((pSharedData = (SharedData *)calloc(1, sizeof(SharedData))) == NULL)
             break;
 
         if (0 > snprintf(pSharedData->szCallHandlePrefix, MSGHANDLE_LEN, "%s", szCallHandlePrefix))

@@ -45,7 +45,19 @@ endif
 
 TCS_HEADER_FILE_PATH=../../framework
 
-CFLAGS := $(CFLAGS) -fPIC -g -Wall -O3 -I$(SRCDIR)/port -I$(SRCDIR)/tests -I$(TCS_HEADER_FILE_PATH)
+CFLAGS := $(CFLAGS) -fPIC -g -Wall -Werror -O3 -I$(SRCDIR)/port -I$(SRCDIR)/tests -I$(TCS_HEADER_FILE_PATH)
+
+# Define a list of pkg-config packages we want to use
+pkg_packages = dlog
+
+PKG_CFLAGS  = $(shell pkg-config --cflags $(pkg_packages))
+PKG_LDFLAGS = $(shell pkg-config --libs $(pkg_packages))
+
+# Combine user supplied, additional, and pkg-config flags
+PKGLD_FLAGS += $(PKG_LDFLAGS) -L./lib
+
+PKGCFLAGS += -Wall -I$(SRCDIR) $(PKCL_CFLAGS) $(PKG_CFLAGS)
+
 ifeq ($(LD_FLAGS), )
 LDFLAGS= $(LD_FLAGS) -lc -pthread -L../../framework/lib -lsecfw -ldl
 else
@@ -65,7 +77,7 @@ $(OUTDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) -o $(OUTDIR)/$*.o -c $(SRCDIR)/$*.c
 
 $(TARGET): $(OUTDIR) $(OBJECTS) $(SOURCES)
-	$(LD) -o $(TARGET) $(OBJECTS) $(LDFLAGS)
+	$(LD) -o $(TARGET) $(OBJECTS) $(LDFLAGS) $(PKGLD_FLAGS)
 
 all: $(TARGET)
 

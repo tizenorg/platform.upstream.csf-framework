@@ -36,6 +36,7 @@
  * This file implements the IPC Client API functions used by Security framework.
  */
 
+#include <dbus/dbus.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -43,6 +44,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "Debug.h"
+#include "IpcClient.h"
 #include "IpcStructs.h"
 #include "TSCErrorCodes.h"
 
@@ -50,21 +53,12 @@ static DBusHandlerResult _IpcClientMsgFilter(DBusConnection *dbconn, DBusMessage
 static bool _IpcClientInit(IpcClientInfo *pInfo);
 static void _IpcClientDeInit(IpcClientInfo *pInfo);
 static void _IpcHandleAsyncReply(DBusPendingCall *pPendingCall, void *pThreadData);
-
-#ifdef DEBUG
-#define DEBUG_LOG(_fmt_, _param_...)    \
-    { \
-        fprintf(stderr, "[TSC Client] %s %d " _fmt_, __FILE__, __LINE__, _param_); \
-    }
-#else
-#define DEBUG_LOG(_fmt_, _param_...)
-#endif
-
+static void _free_str_array(char*** arr, int size);
 
 /**
- * Initializes and returns IPC info of client.
+ * Initializes and returns handle to client side IPC.
  */
-IpcClientInfo* IpcClientOpen(void)
+TSC_IPC_HANDLE IpcClientOpen(void)
 {
     IpcClientInfo *pInfo = NULL;
     pInfo = calloc(1, sizeof(IpcClientInfo));
@@ -78,23 +72,24 @@ IpcClientInfo* IpcClientOpen(void)
     if (!_IpcClientInit(pInfo))
         goto err_conn;
 
-    return pInfo;
+    return (TSC_IPC_HANDLE)pInfo;
 
 err_conn:
     if (pInfo)
         free(pInfo);
 
-    return NULL;
+    return INVALID_IPC_HANDLE;
 }
 
 /**
  * Close the client-side IPC and release the resources.
  */
-void IpcClientClose(IpcClientInfo *pInfo)
+void IpcClientClose(TSC_IPC_HANDLE hIpc)
 {
-    if (!pInfo)
+    if (hIpc == INVALID_IPC_HANDLE)
         return;
 
+    IpcClientInfo *pInfo = (IpcClientInfo *)hIpc;
     _IpcClientDeInit(pInfo);
     free(pInfo);
 }
@@ -114,9 +109,10 @@ char *_GetMsgIdPrefix(void)
 /**
  * Requests the Security framework's IPC server and returns back the reply.
  */
-int TSCSendMessageN(IpcClientInfo *pInfo, const char *service_name, const char *szMethod, int argc,
+int TSCSendMessageN(TSC_IPC_HANDLE hIpc, const char *service_name, const char *szMethod, int argc,
                     char **argv, int *argc_reply, char ***argv_reply, int timeout_milliseconds)
 {
+    IpcClientInfo *pInfo = (IpcClientInfo *)hIpc;
     DBusMessage *dbmsg = NULL;
     DBusMessage *reply_msg = NULL;
     DBusMessageIter dbiter;
@@ -161,7 +157,7 @@ int TSCSendMessageN(IpcClientInfo *pInfo, const char *service_name, const char *
     char *szIdPrefix = _GetMsgIdPrefix();
     if (!szIdPrefix || !dbus_message_iter_append_basic(&dbiter, DBUS_TYPE_STRING, &szIdPrefix))
     {
-        DEBUG_LOG("client_lib: Failed to append id prefix for %s.\n", szMethod);
+        DDBG("client_lib: Failed to append id prefix for %s.\n", szMethod);
         free(szIdPrefix);
         goto err_send;
     }
@@ -170,12 +166,12 @@ int TSCSendMessageN(IpcClientInfo *pInfo, const char *service_name, const char *
     {
         if (!dbus_validate_utf8(argv[i], &dberr))
         {
-            DEBUG_LOG("%s", "client_lib: Not valid utf8 string\n");
+            DDBG("%s", "client_lib: Not valid utf8 string\n");
             goto err_send;
         }
         if (!dbus_message_iter_append_basic(&dbiter, DBUS_TYPE_STRING, &argv[i]))
         {
-            DEBUG_LOG("client_lib: %s failed to append arguments\n", pInfo->pid);
+            DDBG("client_lib: %s failed to append arguments\n", pInfo->pid);
             goto err_send;
         }
     }
@@ -187,22 +183,22 @@ int TSCSendMessageN(IpcClientInfo *pInfo, const char *service_name, const char *
                                                           timeout_milliseconds,
                                                           &dberr);
 
-    if (dbus_error_is_set(&dberr))
+    if (reply_msg == NULL && dbus_error_is_set(&dberr))
     {
-        DEBUG_LOG("client_lib: Failed to end %s\n", dberr.message);
+        DDBG("client_lib: Failed to end %s\n", dberr.message);
         goto err_send;
     }
 
     if (reply_msg == NULL)
     {
-        DEBUG_LOG("%s\n", "client_lib: reply message is NULL");
+        DDBG("%s\n", "client_lib: reply message is NULL");
         goto err_send;
     }
 
     j = 0;
     if (!dbus_message_iter_init(reply_msg, &dbiter))
     {
-        DEBUG_LOG("%s\n", "client_lib: Message has no arguments.");
+        DDBG("%s\n", "client_lib: Message has no arguments.");
         goto zero_args;
     }
 
@@ -210,14 +206,14 @@ int TSCSendMessageN(IpcClientInfo *pInfo, const char *service_name, const char *
     {
         if (dbus_message_iter_get_arg_type(&dbiter) != DBUS_TYPE_STRING)
         {
-            DEBUG_LOG("client_lib: %s argument is not string\n", pInfo->pid);
+            DDBG("client_lib: %s argument is not string\n", pInfo->pid);
             goto err_send;
         }
 
         dbus_message_iter_get_basic(&dbiter, &pArgItem);
         if (!pArgItem)
         {
-            DEBUG_LOG("client_lib: %s arg is NULL\n", pInfo->pid);
+            DDBG("client_lib: %s arg is NULL\n", pInfo->pid);
             goto err_send;
         }
 
@@ -330,7 +326,7 @@ void *_SendMessageWorker(void *pData)
     {
         if (pThreadData == NULL)
         {
-            DEBUG_LOG("%s\n", "Nothing to send from thread. Deadlock!!");
+            DDBG("%s\n", "Nothing to send from thread. Deadlock!!");
             break;
         }
 
@@ -339,7 +335,7 @@ void *_SendMessageWorker(void *pData)
                                         pThreadData->pPrivate);
         if (pPendingData == NULL)
         {
-            DEBUG_LOG("%s\n", "Duplicating user data in thread failed. Deadlock!!");
+            DDBG("%s\n", "Duplicating user data in thread failed. Deadlock!!");
             break;
         }
 
@@ -348,7 +344,7 @@ void *_SendMessageWorker(void *pData)
                                                  &pPendingCall, pThreadData->timeout_milliseconds);
         if (!result || !pPendingCall)
         {
-            DEBUG_LOG("%s\n", "client_lib: SendAsync failed.");
+            DDBG("%s\n", "client_lib: SendAsync failed.");
             break;
         }
 
@@ -379,11 +375,11 @@ void *_SendMessageWorker(void *pData)
 
     if (iSentFailed && pThreadData)
     {
-        DEBUG_LOG("%s\n", "Error in send messsage worker. Unblocking..");
+        DDBG("%s\n", "Error in send messsage worker. Unblocking..");
         UnblockOnSent(pThreadData->pSharedData);
     }
 
-    DEBUG_LOG("%s\n", "Finished send message worker.");
+    DDBG("%s\n", "Finished send message worker.");
     return NULL;
 }
 
@@ -391,11 +387,12 @@ void *_SendMessageWorker(void *pData)
 /**
  * Requests the Security framework's IPC server asynchronously.
  */
-int TSCSendMessageAsync(IpcClientInfo *pInfo, const char *service_name, const char *szMethod,
-                        int argc, char **argv, TSC_CALL_HANDLE *pCallHandle, TSCCallback pCallback,
+int TSCSendMessageAsync(TSC_IPC_HANDLE hIpc, const char *service_name, const char *szMethod,
+                        int argc, char **argv, TSC_CALL_HANDLE *phCallHandle, TSCCallback pCallback,
                         void *pPrivate, int timeout_milliseconds)
 {
-    DEBUG_LOG("%s %s\n", "sendmessage async ", service_name);
+    DDBG("%s %s\n", "sendmessage async ", service_name);
+    IpcClientInfo *pInfo = (IpcClientInfo *)hIpc;
     DBusMessage *pMsg = NULL;
     DBusMessageIter dbiter;
     DBusError dberr;
@@ -428,21 +425,21 @@ int TSCSendMessageAsync(IpcClientInfo *pInfo, const char *service_name, const ch
     char *szIdPrefix = _GetMsgIdPrefix();
     if (!szIdPrefix || !dbus_message_iter_append_basic(&dbiter, DBUS_TYPE_STRING, &szIdPrefix))
     {
-        DEBUG_LOG("client_lib: Failed to append id prefix for %s.\n", szMethod);
+        DDBG("client_lib: Failed to append id prefix for %s.\n", szMethod);
         free(szIdPrefix);
         goto err_send;
     }
-    free(szIdPrefix);
+
     for (i = 0; i < argc; i++)
     {
         if (!dbus_validate_utf8(argv[i], &dberr))
         {
-            DEBUG_LOG("%s", "client_lib: Not valid utf8 string\n");
+            DDBG("%s", "client_lib: Not valid utf8 string\n");
             goto err_send;
         }
         if (!dbus_message_iter_append_basic(&dbiter, DBUS_TYPE_STRING, &argv[i]))
         {
-            DEBUG_LOG("client_lib: %s failed to append arguments\n", pInfo->pid);
+            DDBG("client_lib: %s failed to append arguments\n", pInfo->pid);
             goto err_send;
         }
     }
@@ -452,6 +449,8 @@ int TSCSendMessageAsync(IpcClientInfo *pInfo, const char *service_name, const ch
         dbus_message_set_no_reply(pMsg, TRUE);
 
     SharedData *pSharedData = _CreateSharedData(szIdPrefix, pMsg);
+    free(szIdPrefix);
+
     if (!pSharedData)
     {
         iErr = TSC_ERROR_INSUFFICIENT_RES;
@@ -473,26 +472,26 @@ int TSCSendMessageAsync(IpcClientInfo *pInfo, const char *service_name, const ch
     // Assert that the message is ready to be used.
     if (pThreadData->pSharedData->iSent)
     {
-        DEBUG_LOG("%s\n", "client_lib: Sent flag already set!!");
+        DDBG("%s\n", "client_lib: Sent flag already set!!");
         goto err_send;
     }
 
-    DEBUG_LOG("Before sending: %d\n", dbus_message_get_serial(pMsg));
+    DDBG("Before sending: %d\n", dbus_message_get_serial(pMsg));
     if (_RunDetachedThread(_SendMessageWorker, pThreadData) == -1)
     {
-        DEBUG_LOG("%s\n", "client_lib: Running thread failed!!");
+        DDBG("%s\n", "client_lib: Running thread failed!!");
         goto err_send;
     }
 
     BlockTillSent(pThreadData->pSharedData);
-    DEBUG_LOG("After sending: %d\n", dbus_message_get_serial(pMsg));
+    DDBG("After sending: %d\n", dbus_message_get_serial(pMsg));
 
-    if (pCallHandle)
+    if (phCallHandle)
     {
-        *pCallHandle = pThreadData->pSharedData->pCallHandle;
+        *phCallHandle = (TSC_CALL_HANDLE)pThreadData->pSharedData->pCallHandle;
         //TODO: should add here
-        DEBUG_LOG("method unique  id :%s\n", (*pCallHandle)->idUnique);
-        strncpy((*pCallHandle)->service_name, service_name, TSC_SERVER_NAME_LEN);
+        DDBG("method unique  id :%s\n", ((ClientCallHandle*) phCallHandle)->idUnique);
+        strncpy(pThreadData->pSharedData->pCallHandle->service_name, service_name, TSC_SERVER_NAME_LEN);
     }
     else
     {
@@ -516,9 +515,9 @@ err_send:
 /**
  * Releases the asynchronous call handle.
  */
-void TSCFreeSentMessageHandle(ClientCallHandle *pCallHandle)
+void TSCFreeSentMessageHandle(TSC_CALL_HANDLE hCallHandle)
 {
-    _FreeClientCallHandle(pCallHandle);
+    _FreeClientCallHandle((ClientCallHandle *)hCallHandle);
 }
 
 /**
@@ -550,14 +549,14 @@ static void _IpcHandleAsyncReply(DBusPendingCall *pPendingCall, void *pThreadDat
     pMsg = dbus_pending_call_steal_reply(pPendingCall);
     if (pMsg == NULL)
     {
-        DEBUG_LOG("%s\n", "client_lib: reply message is NULL");
+        DDBG("%s\n", "client_lib: reply message is NULL");
         goto reply_err;
     }
 
     i = 0;
     if (!dbus_message_iter_init(pMsg, &dbiter))
     {
-        DEBUG_LOG("%s\n", "client_lib: Async reply has no arguments");
+        DDBG("%s\n", "client_lib: Async reply has no arguments");
         goto reply_err;
     }
 
@@ -565,14 +564,14 @@ static void _IpcHandleAsyncReply(DBusPendingCall *pPendingCall, void *pThreadDat
     {
         if (dbus_message_iter_get_arg_type(&dbiter) != DBUS_TYPE_STRING)
         {
-            DEBUG_LOG("%s\n", "client_lib: Reply argument is not string");
+            DDBG("%s\n", "client_lib: Reply argument is not string");
             goto reply_err;
         }
 
         dbus_message_iter_get_basic(&dbiter, &pArgItem);
         if (!pArgItem)
         {
-            DEBUG_LOG("%s\n", "client_lib: Failed getting string arg from reply");
+            DDBG("%s\n", "client_lib: Failed getting string arg from reply");
             goto reply_err;
         }
 
@@ -599,14 +598,7 @@ static void _IpcHandleAsyncReply(DBusPendingCall *pPendingCall, void *pThreadDat
 
 reply_err:
     // Reset values being returned.
-    while (i)
-        free(argv[--i]);
-    if (argv)
-    {
-        free(argv);
-        argv = NULL;
-    }
-    argc = i;
+    _free_str_array(&argv, i);
 
 forward_reply:
     if(pMsg)
@@ -615,57 +607,49 @@ forward_reply:
         dbus_pending_call_unref(pPendingCall);
 
     if (pData && pData->pCallBack)
-        (*(pData->pCallBack))(pData->pPrivate, argc, argv);
+        (*(pData->pCallBack))(pData->pPrivate, argc, (const char**)argv);
 
-    DEBUG_LOG("%s\n", "client_lib: Async Reply Completed.");
+    _free_str_array(&argv, i);
+
+    DDBG("%s\n", "client_lib: Async Reply Completed.");
 }
 
 
 /**
  * Cancels an asynchronous request previously made to the Security framework's IPC server.
  * On success, releases the handle of the previously called asynchronous method.
- *
- * TODO: the ClientCallHandle
- * and TSC_CALL_HANDLE (typedef struct _ClientCallHandle * TSC_CALL_HANDLE;) is confusing
  */
-int TSCCancelMessage(IpcClientInfo *pInfo, ClientCallHandle *pCallHandle)
+int TSCCancelMessage(TSC_IPC_HANDLE hIpc, TSC_CALL_HANDLE hCallHandle)
 {
-    int argc_reply = 0;
-    char **argv_reply = NULL;
+    IpcClientInfo *pInfo = (IpcClientInfo *)hIpc;
+    ClientCallHandle *pCallHandle = (ClientCallHandle *)hCallHandle;
     char *argv_req[1];
     int iResult = -1;
 
     do
     {
-        DEBUG_LOG("%s\n", "client_lib: CANCELing.");
+        DDBG("%s\n", "client_lib: CANCELing.");
         if (!pInfo || !pCallHandle)
             break;
 
-        DEBUG_LOG("%s\n", "prepare cancel");
+        DDBG("%s\n", "prepare cancel");
         // Cancel the message call locally.
         dbus_pending_call_cancel(pCallHandle->pPendingCall);
 
         // Now request the server to abort the running of the method.
         argv_req[0] = pCallHandle->idUnique;
-        DEBUG_LOG("cancel method unique id:%s\n", argv_req[0]);
+        DDBG("cancel method unique id:%s\n", argv_req[0]);
         //TODO: need change here for cancel message
 
         TSC_CALL_HANDLE handle = NULL;
-        iResult = TSCSendMessageAsync(pInfo, pCallHandle->service_name, TSC_FN_CANCELMETHOD, 1,
-                                      argv_req, &handle, NULL, NULL, DEF_TIMEOUT);
-        DEBUG_LOG("%s\n", "client_lib: Sent Cancel to server.");
+        iResult = TSCSendMessageAsync((TSC_IPC_HANDLE)pInfo, pCallHandle->service_name,
+                                      TSC_FN_CANCELMETHOD, 1, argv_req, &handle, NULL, NULL,
+                                      DEF_TIMEOUT);
+        DDBG("%s\n", "client_lib: Sent Cancel to server.");
 
         if (iResult == 0)
         {
             _FreeClientCallHandle(pCallHandle);
-
-            // Ignore the returned values, if any.
-            if (argv_reply)
-            {
-                while (argc_reply)
-                    free(argv_reply[--argc_reply]);
-                free(argv_reply);
-            }
         }
 
     } while (0);
@@ -678,7 +662,7 @@ static DBusHandlerResult _IpcClientMsgFilter(DBusConnection *dbconn, DBusMessage
     IpcClientInfo *info = (IpcClientInfo*) data;
     if (dbus_message_is_signal(dbmsg, DBUS_INTERFACE_LOCAL, "Disconnected"))
     {
-    	DEBUG_LOG("client_lib: %s disconnected by signal\n", info->pid);
+    	DDBG("client_lib: %s disconnected by signal\n", info->pid);
         info->dbconn = NULL;
         return DBUS_HANDLER_RESULT_HANDLED;
     }
@@ -694,24 +678,29 @@ static bool _IpcClientInit(IpcClientInfo *pInfo)
     DBusError dberr;
     int ret;
 
+    if (!dbus_threads_init_default())
+    {
+        DDBG("failed dbus_threads_init_default %s\n", "");
+        goto err;
+    }
+
     dbus_error_init(&dberr);
 
-    dbus_threads_init_default();
 
     if (pInfo->dbconn != NULL)
         return false;
 
     pInfo->dbconn = dbus_bus_get(DBUS_BUS_SYSTEM, &dberr);
 
-    if (dbus_error_is_set(&dberr))
+    if (pInfo->dbconn == NULL && dbus_error_is_set(&dberr))
     {
-    	DEBUG_LOG("client_lib: %s error in get connection %s\n", pInfo->pid, dberr.message);
+    	DDBG("client_lib: %s error in get connection %s\n", pInfo->pid, dberr.message);
         goto err_get;
     }
 
     if (!pInfo->dbconn)
     {
-    	DEBUG_LOG("client_lib: %s get connection is NULL\n", pInfo->pid);
+    	DDBG("client_lib: %s get connection is NULL\n", pInfo->pid);
         goto err_get;
     }
 
@@ -719,21 +708,21 @@ static bool _IpcClientInit(IpcClientInfo *pInfo)
 
     if (!dbus_connection_add_filter(pInfo->dbconn, _IpcClientMsgFilter, pInfo, NULL))
     {
-    	DEBUG_LOG("client_lib: %s failed to add filter %s\n", pInfo->pid, dberr.message);
+    	DDBG("client_lib: %s failed to add filter %s\n", pInfo->pid, dberr.message);
         goto err_get;
     }
 
     ret = dbus_bus_request_name(pInfo->dbconn, pInfo->req_name, DBUS_NAME_FLAG_REPLACE_EXISTING, &dberr);
 
-    if (dbus_error_is_set(&dberr))
+    if (ret == -1 && dbus_error_is_set(&dberr))
     {
-    	DEBUG_LOG("client_lib: %s failed to request name %s\n", pInfo->pid, dberr.message);
+    	DDBG("client_lib: %s failed to request name %s\n", pInfo->pid, dberr.message);
         goto err_get;
     }
 
     if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
     {
-    	DEBUG_LOG("client_lib: %s failed, it is not primary owner %d\n", pInfo->req_name, ret);
+    	DDBG("client_lib: %s failed, it is not primary owner %d\n", pInfo->req_name, ret);
         goto err_get;
     }
 
@@ -748,6 +737,7 @@ err_get:
     }
     dbus_error_free(&dberr);
 
+err:
     return false;
 }
 
@@ -757,18 +747,39 @@ static void _IpcClientDeInit(IpcClientInfo *pInfo)
         return;
 
     DBusError dberr;
+    int ret;
 
     if (!pInfo->dbconn)
         return;
 
     dbus_error_init(&dberr);
-    dbus_bus_release_name(pInfo->dbconn, pInfo->req_name, &dberr);
-    if (dbus_error_is_set(&dberr))
-    	DEBUG_LOG("client_lib: %s failed to release name %s\n", pInfo->pid, dberr.message);
+    ret = dbus_bus_release_name(pInfo->dbconn, pInfo->req_name, &dberr);
+
+    if (ret == -1 && dbus_error_is_set(&dberr))
+    	DDBG("client_lib: %s failed to release name %s\n", pInfo->pid, dberr.message);
 
     dbus_error_free(&dberr);
 
     dbus_connection_remove_filter(pInfo->dbconn, _IpcClientMsgFilter, pInfo);
     dbus_connection_unref(pInfo->dbconn);
     pInfo->dbconn = NULL;
+}
+
+/**
+ * Release all the elements of the array and assign it to NULL.
+ */
+static void _free_str_array(char*** arr, int size)
+{
+    if (arr)
+    {
+        char **sArr = *arr;
+        if (sArr && *sArr)
+        {
+            while (size)
+                free(sArr[--size]);
+
+            free(sArr);
+            *arr = NULL;
+        }
+    }
 }

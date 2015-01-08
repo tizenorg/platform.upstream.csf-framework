@@ -62,7 +62,7 @@ else
 	CFLAGS := -g -fPIC $(INCLUDE) -DUNIX -DDEBUG $(CFLAGS)
 endif
 
-CFLAGS := $(CFLAGS) $(PKCL_CFLAGS) $(TCS_CFLAGS)
+CFLAGS := $(CFLAGS) $(PKCL_CFLAGS) $(TCS_CFLAGS) -Wall -Werror
 
 SOURCES = $(SRCDIR)/TWPSerDaemon.c \
 		$(SRCDIR)/IpcForkDaemon.c 
@@ -73,7 +73,11 @@ OBJECTS = $(OUTDIR)/TWPSerDaemon.o \
 MKDEP = mkdep -f .depend
 
 # Define a list of pkg-config packages we want to use
-pkg_packages = dbus-glib-1 dlog
+ifeq ($(TCS_CFG), release)
+	pkg_packages = dbus-glib-1
+else
+	pkg_packages = dbus-glib-1 dlog
+endif
 
 PKG_CFLAGS  = $(shell pkg-config --cflags $(pkg_packages))
 PKG_LDFLAGS = $(shell pkg-config --libs $(pkg_packages))

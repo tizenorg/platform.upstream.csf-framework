@@ -134,8 +134,6 @@ static int ScanBuffer(TestCase *pCtx);
 static int ScanFile(TestCase *pCtx);
 static char *GetTestRoot(void);
 static void PutTestRoot(char *pszRoot);
-static int BufferCompare(const char *pBuffer1, const char *pBuffer2, int iLen);
-static int FileCompare(const char *pszFile1, const char *pszFile2);
 static int VerifyRepairData(TestCase *pCtx, const char *pRepairedBuffer,
                             int iRepairedLen);
 static int VerifyRepairFile(TestCase *pCtx);
@@ -1104,37 +1102,6 @@ void TestScanFileEx(const char *pszFunc, int iTType, int iPolarity,
 }
 
 
-static int BufferCompare(const char *pBuffer1, const char *pBuffer2, int iLen)
-{
-
-    return memcmp(pBuffer1, pBuffer2, iLen);
-}
-
-
-static int FileCompare(const char *pszFile1, const char *pszFile2)
-{
-    int iLen1 = 0, iLen2 = 0, iRet = -1;
-    char *pBuffer1 = NULL, *pBuffer2 = NULL;
-
-    pBuffer1 = LoadFile(pszFile1, &iLen1);
-    if (pBuffer1 != NULL)
-    {
-        pBuffer2 = LoadFile(pszFile2, &iLen2);
-        if (pBuffer2 != NULL)
-        {
-            if (iLen1 != iLen2)
-                iRet = iLen1 - iLen2;
-
-            iRet = BufferCompare(pBuffer1, pBuffer2, iLen1);
-            PutLoadedFile(pBuffer2);
-        }
-        PutLoadedFile(pBuffer1);
-    }
-
-    return iRet;
-}
-
-
 static int ConInfectedFile(int iType, int iCompressFlag, const char *pszPath)
 {
     int iRet = -1;
@@ -1229,7 +1196,7 @@ static int Infected(TestCase *pCtx, const char *pData, int iDataLen)
     TCSLIB_HANDLE hLib = INVALID_TCSLIB_HANDLE;
     TestCase TestCtx = *pCtx;
 
-    ScanCtx.pData = pData;
+    ScanCtx.pData = (char *) pData;
     ScanCtx.uSize = (unsigned int) iDataLen;
     ScanCtx.pCurrentTestCase = pCtx;
 
@@ -1337,7 +1304,7 @@ static int ConVerifyRepairData(int iTType, int iCompressFlag, const char *pRepai
                                int iRepairedLen)
 {
 
-    return ConInfected(iTType, iCompressFlag, pRepairedBuffer, iRepairedLen);
+    return ConInfected(iTType, iCompressFlag, (char *) pRepairedBuffer, iRepairedLen);
 }
 
 

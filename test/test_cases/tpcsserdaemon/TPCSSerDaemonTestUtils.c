@@ -99,9 +99,9 @@ static void CallSys(const char *pszCmd);
 static pid_t StartProcess(const char *szPath, char *const argv[]);
 static pid_t StartProcess(const char *szPath, char *const argv[]);
 // For test cases needing concurrency.
-static void ConTestCaseCtor(ConTestContext *pConCtx, IpcClientInfo *pInfo, int iCid,
+static void ConTestCaseCtor(ConTestContext *pConCtx, TSC_IPC_HANDLE hIpc, int iCid,
                             TestCase *pCtx, const char *szMethod, int timeout, 
-                            Callback pfnCallback);
+                            TSCCallback pfnCallback);
 static void ConTestCaseDtor(ConTestContext *pConCtx);
 static int ConWaitOnTestCond(ConTestContext conCtxAry[], int len);
 static int ConTestSuccess(ConTestContext conCtxAry[], int len);
@@ -115,13 +115,13 @@ static void *ConUninstallProc(void *pData);
 static void *ConUninstallProcAsync(void *pData);
 static void *ConSetActiveProc(void *pData);
 static void *ConSetActiveProcAsync(void *pData);
-static void *ConSendMessageProc(void *pData);
+/*static void *ConSendMessageProc(void *pData);*/
 static void *ConSendMessageProcAsync(void *pData);
 static void *ConSendMessageProcCancelAsync(void *pData);
-static void Callback_GetInfo(void *pPrivate, int argc, char **argv);
-static void Callback_Install(void *pPrivate, int argc, char **argv);
-static void Callback_Uninstall(void *pPrivate, int argc, char **argv);
-static void Callback_SetActive(void *pPrivate, int argc, char **argv);
+static void Callback_GetInfo(void *pPrivate, int argc, const char **argv);
+static void Callback_Install(void *pPrivate, int argc, const char **argv);
+static void Callback_Uninstall(void *pPrivate, int argc, const char **argv);
+static void Callback_SetActive(void *pPrivate, int argc, const char **argv);
 
 pthread_mutex_t g_Mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t g_Cond = PTHREAD_COND_INITIALIZER;
@@ -208,7 +208,7 @@ static int ConTestSuccess(ConTestContext *pConCtxAry, int len)
 
     for (i = 0; i < len; i++)
     {
-        DEBUG_LOG("\nSuccess [%d] iConTestRet=%d, iConTestReplyRet=%d\n", i,
+        DDBG("\nSuccess [%d] iConTestRet=%d, iConTestReplyRet=%d\n", i,
                 pConCtxAry[i].iConTestRet, pConCtxAry[i].iConTestReplyRet);
 
         if (pConCtxAry[i].iConTestRet != 1 || pConCtxAry[i].iConTestReplyRet != 1)
@@ -219,13 +219,13 @@ static int ConTestSuccess(ConTestContext *pConCtxAry, int len)
 }
 
 
-static void ConTestCaseCtor(ConTestContext *pConCtx, IpcClientInfo *pInfo, int iCid, TestCase *pCtx,
-                            const char *szMethod, int timeout, Callback pfnCallback)
+static void ConTestCaseCtor(ConTestContext *pConCtx, TSC_IPC_HANDLE hIpc, int iCid, TestCase *pCtx,
+                            const char *szMethod, int timeout, TSCCallback pfnCallback)
 {
     pConCtx->pTestCtx = pCtx;
     pConCtx->szMethod = szMethod;
     pConCtx->timeout = timeout;
-    pConCtx->pInfo = pInfo;
+    pConCtx->hIpc = hIpc;
     pConCtx->iCid = iCid;
     pConCtx->cbReply = pfnCallback;
     pConCtx->iConTestRet = 0; /* running. */
@@ -287,7 +287,7 @@ void Callback_In1_Out1(void *pPrivate, int argc, char **argv)
 
     // Cleanup - On both success and failure.
     CleanupReply(&argv, &argc);
-    DEBUG_LOG("%s\n", "In1_Out1 Callback done");
+    DDBG("%s\n", "In1_Out1 Callback done");
 
     CONREPLYTEST_RELEASE(pConCtx)
 }
@@ -306,7 +306,7 @@ void Callback_In1_Out2(void *pPrivate, int argc, char **argv)
 
     // Cleanup - On both success and failure.
     CleanupReply(&argv, &argc);
-    DEBUG_LOG("%s\n", "In1_Out2 Callback done");
+    DDBG("%s\n", "In1_Out2 Callback done");
 
     CONREPLYTEST_RELEASE(pConCtx)
 }
@@ -327,7 +327,7 @@ static void *ConGetInfoProcAsync(void *pData)
     pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &iOldType);
 
     TSC_CALL_HANDLE handle = NULL;
-    iResult = TSCSendMessageAsync(pConCtx->pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
+    iResult = TSCSendMessageAsync(pConCtx->hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
                                   pConCtx->szMethod, req_argc, req_argv,
                                   &handle, Callback_GetInfo, pConCtx, pConCtx->timeout);
 
@@ -356,7 +356,7 @@ static void *ConGetInfoProc(void *pData)
 
     pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &iOldType);
 
-    iResult = TSCSendMessageN(pConCtx->pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
+    iResult = TSCSendMessageN(pConCtx->hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
                               pConCtx->szMethod, req_argc, req_argv, &rep_argc,
                               &rep_argv, pConCtx->timeout);
 
@@ -389,7 +389,7 @@ static void *ConInstallProcAsync(void *pData)
     pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &iOldType);
 
     TSC_CALL_HANDLE handle = NULL;
-    iResult = TSCSendMessageAsync(pConCtx->pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
+    iResult = TSCSendMessageAsync(pConCtx->hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
                                   pConCtx->szMethod, req_argc, req_argv,
                                   &handle, Callback_Install, pConCtx, pConCtx->timeout);
 
@@ -419,7 +419,7 @@ static void *ConInstallProc(void *pData)
 
     pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &iOldType);
 
-    iResult = TSCSendMessageN(pConCtx->pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
+    iResult = TSCSendMessageN(pConCtx->hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
                               pConCtx->szMethod, req_argc, req_argv, &rep_argc,
                               &rep_argv, pConCtx->timeout);
 
@@ -455,7 +455,7 @@ static void *ConUninstallProc(void *pData)
 
     pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &iOldType);
 
-    iResult = TSCSendMessageN(pConCtx->pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
+    iResult = TSCSendMessageN(pConCtx->hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
                               pConCtx->szMethod, req_argc, req_argv, &rep_argc,
                               &rep_argv, pConCtx->timeout);
 
@@ -487,7 +487,7 @@ static void *ConUninstallProcAsync(void *pData)
     pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &iOldType);
 
     TSC_CALL_HANDLE handle = NULL;
-    iResult = TSCSendMessageAsync(pConCtx->pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
+    iResult = TSCSendMessageAsync(pConCtx->hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
                                   pConCtx->szMethod, req_argc, req_argv,
                                   &handle, Callback_Uninstall, pConCtx, pConCtx->timeout);
 
@@ -519,7 +519,7 @@ static void *ConSetActiveProc(void *pData)
 
     pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &iOldType);
 
-    iResult = TSCSendMessageN(pConCtx->pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
+    iResult = TSCSendMessageN(pConCtx->hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
                               pConCtx->szMethod, req_argc, req_argv, &rep_argc,
                               &rep_argv, pConCtx->timeout);
 
@@ -552,7 +552,7 @@ static void *ConSetActiveProcAsync(void *pData)
     pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &iOldType);
 
     TSC_CALL_HANDLE handle = NULL;
-    iResult = TSCSendMessageAsync(pConCtx->pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
+    iResult = TSCSendMessageAsync(pConCtx->hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
                                   pConCtx->szMethod, req_argc, req_argv,
                                   &handle, Callback_SetActive, pConCtx, pConCtx->timeout);
 
@@ -564,6 +564,7 @@ static void *ConSetActiveProcAsync(void *pData)
 
 }
 
+/*
 static void *ConSendMessageProc(void *pData)
 {
     int iOldType;
@@ -582,7 +583,7 @@ static void *ConSendMessageProc(void *pData)
 
     pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &iOldType);
 
-    iResult = TSCSendMessageN(pConCtx->pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
+    iResult = TSCSendMessageN(pConCtx->hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
                               pConCtx->szMethod, req_argc, req_argv, &rep_argc,
                               &rep_argv, pConCtx->timeout);
 
@@ -597,6 +598,7 @@ static void *ConSendMessageProc(void *pData)
 
     return NULL;
 }
+*/
 
 
 static void *ConSendMessageProcAsync(void *pData)
@@ -614,7 +616,7 @@ static void *ConSendMessageProcAsync(void *pData)
     pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &iOldType);
 
     TSC_CALL_HANDLE handle = NULL;
-    iResult = TSCSendMessageAsync(pConCtx->pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
+    iResult = TSCSendMessageAsync(pConCtx->hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
                                   pConCtx->szMethod, req_argc, req_argv,
                                   &handle, pConCtx->cbReply, pConCtx, pConCtx->timeout);
 
@@ -640,15 +642,15 @@ static void *ConSendMessageProcCancelAsync(void *pData)
 
     pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &iOldType);
 
-    DEBUG_LOG("%s\n", "Sending message to be CANCELLED");
+    DDBG("%s\n", "Sending message to be CANCELLED");
     TSC_CALL_HANDLE handle = NULL;
-    iResult = TSCSendMessageAsync(pConCtx->pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
+    iResult = TSCSendMessageAsync(pConCtx->hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL,
                                   pConCtx->szMethod, req_argc, req_argv,
                                   &handle, pConCtx->cbReply, pConCtx, pConCtx->timeout);
 
     sleep(1);
-    iResult = TSCCancelMessage(pConCtx->pInfo, handle);
-    DEBUG_LOG("Result after cancel:%d\n", iResult);
+    iResult = TSCCancelMessage(pConCtx->hIpc, handle);
+    DDBG("Result after cancel:%d\n", iResult);
 
     CONTEST_ASSERT(iResult == 0);
 
@@ -661,17 +663,17 @@ static void *ConSendMessageProcCancelAsync(void *pData)
 /**
  *
  */
-void ConSendMessage(TestCase *pCtx, IpcClientInfo *pInfo, ConTestContext conCtxs[],
+void ConSendMessage(TestCase *pCtx, TSC_IPC_HANDLE hIpc, ConTestContext conCtxs[],
                     pthread_t threads[], int lenCtxs, MethodCall methods[], int timeout)
 {
     int i, iRet = 0;
 
     /* Basic validation */
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     /* Prepare for concurrency tests. */
     for (i = 0; i < lenCtxs; i++)
-        ConTestCaseCtor(&conCtxs[i], pInfo, i + 1, pCtx, methods[i].szMethod, timeout, 
+        ConTestCaseCtor(&conCtxs[i], hIpc, i + 1, pCtx, methods[i].szMethod, timeout,
                         methods[i].pfnCallback);
 
     /* Concurrency tests. */
@@ -728,11 +730,11 @@ void ConSendMessage(TestCase *pCtx, IpcClientInfo *pInfo, ConTestContext conCtxs
     sleep(5);
     /* Wait for all tests completed. */
     iRet = ConWaitOnTestCond(conCtxs, lenCtxs);
-    DEBUG_LOG("All done. iRet = %d\n", iRet);
+    DDBG("All done. iRet = %d\n", iRet);
 
     if (iRet == ETIMEDOUT)
     {
-        DEBUG_LOG("%s\n", "Timed out.");
+        DDBG("%s\n", "Timed out.");
         usleep(SLEEP_INTERVAL);
         /* Cancel them all, if timeout. */
         for (i = 0; i < lenCtxs; i++)
@@ -757,7 +759,7 @@ void ConSendMessage(TestCase *pCtx, IpcClientInfo *pInfo, ConTestContext conCtxs
 /**
  *
  */
-void InThreadSendMessageAsync(TestCase *pCtx, IpcClientInfo *pInfo, 
+void InThreadSendMessageAsync(TestCase *pCtx, TSC_IPC_HANDLE hIpc,
                               ConTestContext conCtxs[], int lenCtxs, 
                               MethodCall methods[], int timeout)
 {
@@ -765,7 +767,7 @@ void InThreadSendMessageAsync(TestCase *pCtx, IpcClientInfo *pInfo,
     int i = 0;
     for (i = 0; i < lenCtxs; i++)
     {
-        ConTestCaseCtor(&conCtxs[i], pInfo, i + 1, pCtx, methods[i].szMethod, timeout,
+        ConTestCaseCtor(&conCtxs[i], hIpc, i + 1, pCtx, methods[i].szMethod, timeout,
                         methods[i].pfnCallback);
 
         // Wraps creating concurrency & sending of message in current thread.
@@ -774,7 +776,7 @@ void InThreadSendMessageAsync(TestCase *pCtx, IpcClientInfo *pInfo,
 
     /* Wait for all tests to complete. */
     int iRet = ConWaitOnTestCond(conCtxs, lenCtxs);
-    DEBUG_LOG("All done. iRet = %d\n", iRet);
+    DDBG("All done. iRet = %d\n", iRet);
 
     if (iRet == ETIMEDOUT)
     {
@@ -794,7 +796,7 @@ void InThreadSendMessageAsync(TestCase *pCtx, IpcClientInfo *pInfo,
 /**
  *
  */
-void InThreadSendMessageCancelAsync(TestCase *pCtx, IpcClientInfo *pInfo,
+void InThreadSendMessageCancelAsync(TestCase *pCtx, TSC_IPC_HANDLE hIpc,
                                     ConTestContext conCtxs[], int lenCtxs,
                                     MethodCall methods[], int timeout)
 {
@@ -802,7 +804,7 @@ void InThreadSendMessageCancelAsync(TestCase *pCtx, IpcClientInfo *pInfo,
     int i = 0;
     for (i = 0; i < lenCtxs; i++)
     {
-        ConTestCaseCtor(&conCtxs[i], pInfo, i + 1, pCtx, methods[i].szMethod, timeout,
+        ConTestCaseCtor(&conCtxs[i], hIpc, i + 1, pCtx, methods[i].szMethod, timeout,
                         methods[i].pfnCallback);
 
         // Wraps creating concurrency & sending of message in current thread.
@@ -812,7 +814,7 @@ void InThreadSendMessageCancelAsync(TestCase *pCtx, IpcClientInfo *pInfo,
 
     /* Wait for all tests to complete. */
     int iRet = ConWaitOnTestCond(conCtxs, lenCtxs);
-    DEBUG_LOG("All done. iRet = %d\n", iRet);
+    DDBG("All done. iRet = %d\n", iRet);
 
     if (iRet == ETIMEDOUT)
     {
@@ -891,7 +893,7 @@ pid_t StartTPCSServerStub(void)
 
 void CleanupReply(char ***pArr, int *pLen)
 {
-    if (pArr) {
+    if (pArr && *pArr) {
         while (*pLen)
             free ((*pArr)[--(*pLen)]);
 
@@ -962,7 +964,6 @@ int GetXmlFromFile(const char *pFileName, xmlDoc **pXmlDoc)
             *pXmlDoc = xmlCtxtReadFile(pParserCtxt, pFileName, NULL, XML_PARSE_DTDVALID);
             if (pXmlDoc != NULL)
             {
-
                 // Check if validation succeeded
                 if (pParserCtxt->valid)
                     ret = 0;
@@ -975,7 +976,7 @@ int GetXmlFromFile(const char *pFileName, xmlDoc **pXmlDoc)
     return ret;
 }
 
-int SearchNodeN(const char *xpath, const xmlDoc *pXmlDoc, const char* appId)
+int SearchNodeN(const xmlChar *xpath, xmlDocPtr pXmlDoc, const char* appId)
 {
 
     int result = -1;
@@ -1009,18 +1010,30 @@ int SearchNodeN(const char *xpath, const xmlDoc *pXmlDoc, const char* appId)
     }
 
     pNodeSet = pXPathObj->nodesetval;
-    int count = pNodeSet->nodeNr;
-    int i;
-    xmlNode *cur;
-
-    for(; i < count; i++)
+    if (pNodeSet)
     {
-        cur = pNodeSet->nodeTab[i]->children;
-        if (strncmp(cur->content, appId, strlen(appId)) == 0)
+        int count = pNodeSet->nodeNr;
+        int i = 0;
+        xmlNode *cur;
+
+        for(; i < count; i++)
         {
-            result = 0;
-            break;
+        	if (pNodeSet->nodeTab[i])
+        	{
+                cur = pNodeSet->nodeTab[i]->children;
+                if (cur)
+                {
+                    if (strcmp((const char *)cur->content, appId) == 0)
+                    {
+                        result = 0;
+                        break;
+                    }
+
+                }
+
+        	}
         }
+
     }
     xmlXPathFreeObject(pXPathObj);
     xmlXPathFreeContext(pXPathCtx);
@@ -1033,11 +1046,11 @@ int HasNode(const char *xpath, const char *appId)
 
     int ret = -1;
     xmlDoc *pDoc = NULL;
-    //TEST_ASSERT(GetXmlFromMemory(&pDoc, req_argv[1] == 0));
+
     ret = GetXmlFromFile("/usr/bin/tpcs_config.xml", &pDoc);
     if (ret == 0)
     {
-        ret = SearchNodeN(xpath, pDoc, appId);
+        ret = SearchNodeN((const xmlChar *)xpath, pDoc, appId);
         xmlFreeDoc(pDoc);
     }
     return ret;
@@ -1046,7 +1059,7 @@ int HasNode(const char *xpath, const char *appId)
 /**
  *
  */
-static void Callback_GetInfo(void *pPrivate, int argc, char **argv)
+static void Callback_GetInfo(void *pPrivate, int argc, const char **argv)
 {
     CONREPLYTEST_START
 
@@ -1057,14 +1070,12 @@ static void Callback_GetInfo(void *pPrivate, int argc, char **argv)
         CONREPLYTEST_ASSERT(strncmp(argv[0], RETURN_SUCCESS, 1) == 0);
     }
 
-    // Cleanup - On both success and failure.
-    CleanupReply(&argv, &argc);
-    DEBUG_LOG("%s\n", "Callback done");
+    DDBG("%s\n", "Callback done");
 
     CONREPLYTEST_RELEASE(pConCtx)
 }
 
-static void Callback_Install(void *pPrivate, int argc, char **argv)
+static void Callback_Install(void *pPrivate, int argc, const char **argv)
 {
     CONREPLYTEST_START
 
@@ -1075,13 +1086,12 @@ static void Callback_Install(void *pPrivate, int argc, char **argv)
         CONREPLYTEST_ASSERT(strncmp(argv[0], RETURN_SUCCESS, 1) == 0);
     }
 
-    // Cleanup - On both success and failure.
-    CleanupReply(&argv, &argc);
-    DEBUG_LOG("%s\n", "Callback done");
+    DDBG("%s\n", "Callback done");
 
     CONREPLYTEST_RELEASE(pConCtx)
 }
-static void Callback_Uninstall(void *pPrivate, int argc, char **argv)
+
+static void Callback_Uninstall(void *pPrivate, int argc, const char **argv)
 {
     CONREPLYTEST_START
 
@@ -1092,13 +1102,12 @@ static void Callback_Uninstall(void *pPrivate, int argc, char **argv)
         CONREPLYTEST_ASSERT(strncmp(argv[0], RETURN_SUCCESS, 1) == 0);
     }
 
-    // Cleanup - On both success and failure.
-    CleanupReply(&argv, &argc);
-    DEBUG_LOG("%s\n", "Callback done");
+    DDBG("%s\n", "Callback done");
 
     CONREPLYTEST_RELEASE(pConCtx)
 }
-static void Callback_SetActive(void *pPrivate, int argc, char **argv)
+
+static void Callback_SetActive(void *pPrivate, int argc, const char **argv)
 {
     CONREPLYTEST_START
 
@@ -1109,9 +1118,7 @@ static void Callback_SetActive(void *pPrivate, int argc, char **argv)
         CONREPLYTEST_ASSERT(strncmp(argv[0], RETURN_SUCCESS, 1) == 0);
     }
 
-    // Cleanup - On both success and failure.
-    CleanupReply(&argv, &argc);
-    DEBUG_LOG("%s\n", "Callback done");
+    DDBG("%s\n", "Callback done");
 
     CONREPLYTEST_RELEASE(pConCtx)
 }

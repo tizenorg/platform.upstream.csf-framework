@@ -42,6 +42,7 @@ const char *TCSPGetVersion(void);
  *
  * \return Return Type (const char *) \n
  * Meta information of plugin. \n
+ * Size should less than TCS_META_MAX. \n
  */
 const char *TCSPGetInfo(void);
 

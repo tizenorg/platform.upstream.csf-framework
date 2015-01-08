@@ -4,9 +4,9 @@ build()
 {
 	if [ $1 = "i386" ]
 	then
-	. ./scripts/PrepareForEmul.sh
+	    . ./scripts/PrepareForEmul.sh
 	else
-	. ./scripts/PrepareForDevice.sh
+	    . ./scripts/PrepareForDevice.sh
 	fi
 	
     	cd ../framework
@@ -75,9 +75,9 @@ run()
 	  
 	  if [ "$TCS" = "" -o "$TWP" = "" -o "$TPCS" = "" -o "$TWPS" = "" ]
 	  then
-	  echo "FAILED">>finalResult_i386.txt
+	      echo "FAILED">>finalResult_i386.txt
 	  else
-	  echo "PASSED">>finalResult_i386.txt
+	      echo "PASSED">>finalResult_i386.txt
 	  fi
 	else
 	  sdb -d root on
@@ -109,29 +109,27 @@ run()
 	  
 	  if [ "$TCS" = "" -o "$TWP" = "" ]
 	  then
-	  echo "FAILED">>finalResult_arm.txt
+	      echo "FAILED">>finalResult_arm.txt
 	  else
-	  echo "PASSED">>finalResult_arm.txt
+	      echo "PASSED">>finalResult_arm.txt
 	  fi
 	fi
 }
 
 type=$2;
 if [ "$type" = "" ]
- then
-  type="i386"
+then
+    type="i386"
 fi
 
 if [ "$1" == "Build" ]
 then
-	build $type
-fi
-
-if [ "$1" == "Run" ]
+    build $type
+elif [ "$1" == "Run" ]
 then
-	build $type
-	run  $type
+    build $type
+    run  $type
 else
-echo "Invalid Parameters"
+    echo "Invalid Parameters"
 fi
 

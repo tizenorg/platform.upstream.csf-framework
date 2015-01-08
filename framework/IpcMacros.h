@@ -53,7 +53,7 @@
 #define TSC_FN_PROGRESSMETHOD  "_Progress_"
 #define TSC_FN_SHUTDOWN "IpcShutdown"
 
-#define TSC_MID_PREFIX_FORMAT  "%u_%u_"
+#define TSC_MID_PREFIX_FORMAT  "%u_%lu_"
 #define TSC_MID_FORMAT         TSC_MID_PREFIX_FORMAT"%u"
 #define TSC_MID_SVR_FORMAT     "%s%u"
 

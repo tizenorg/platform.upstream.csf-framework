@@ -328,7 +328,7 @@ TWP_RESULT TWPGetVersion(TWPLIB_HANDLE hLib, TWPVerInfo *pVerInfo);
  * This is a synchronous API.
  *
  * \param[in] hLib instance handle obtained from a call to the TWPInitLibrary().
- * \param[out] pszInfo string containing meta info
+ * \param[out] pszInfo string containing meta info, pszInfo allocated by caller of size TWP_META_MAX.
  *
  * \return TWP_RESULT
  */

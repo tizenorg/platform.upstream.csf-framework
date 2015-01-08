@@ -46,7 +46,7 @@ else
 endif
 
 # Define a list of pkg-config packages we want to use
-pkg_packages = dbus-glib-1
+pkg_packages = dbus-glib-1 dlog
 
 PKG_CFLAGS  = $(shell pkg-config --cflags $(pkg_packages))
 PKG_LDFLAGS = $(shell pkg-config --libs $(pkg_packages))
@@ -59,9 +59,9 @@ LD_FLAGS += $(PKG_LDFLAGS) -lscclient -lscserver -L$(TSC_ROOT_PATH)/lib -lxml2
 GBS_CFLAGS = -I${SYSROOT}/usr/include/dbus-1.0 -I${SYSROOT}/usr/lib/dbus-1.0/include -I${SYSROOT}/usr/include/libxml2
 
 ifeq ($(TCS_CFG), release)
-	CFLAGS := $(CFLAGS) -fPIE -g -Wall -O3 -I$(SRCDIR) -I$(TSC_ROOT_PATH) $(PKCL_CFLAGS) $(GBS_CFLAGS) $(PKG_CFLAGS) -I../
+	CFLAGS := $(CFLAGS) -fPIE -g -Wall -Werror -O3 -I$(SRCDIR) -I$(TSC_ROOT_PATH) $(PKCL_CFLAGS) $(GBS_CFLAGS) $(PKG_CFLAGS) -I../
 else
-	CFLAGS := $(CFLAGS) -fPIE -g -Wall -O3 -DDEBUG -I$(SRCDIR) -I$(TSC_ROOT_PATH) $(PKCL_CFLAGS) $(GBS_CFLAGS) $(PKG_CFLAGS) -I../
+	CFLAGS := $(CFLAGS) -fPIE -g -Wall -Werror -O3 -DDEBUG -I$(SRCDIR) -I$(TSC_ROOT_PATH) $(PKCL_CFLAGS) $(GBS_CFLAGS) $(PKG_CFLAGS) -I../
 endif
 
 SOURCES=$(SRCDIR)/TPCSSerDaemonTestUtils.c \

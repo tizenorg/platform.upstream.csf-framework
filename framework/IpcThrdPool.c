@@ -40,16 +40,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <pthread.h>
+#include "Debug.h"
 #include "IpcThrdPool.h"
-
-#ifdef DEBUG
-#define DEBUG_LOG(_fmt_, _param_...)    \
-    { \
-        fprintf(stderr, "[TSC Server] %s %d " _fmt_, __FILE__, __LINE__, _param_); \
-    }
-#else
-#define DEBUG_LOG(_fmt_, _param_...)
-#endif
 
 static void IpcThrPoolReset(IpcHandlePool *pHPool)
 {
@@ -88,7 +80,7 @@ static int AddHandleToThrPool(IpcHandlePool *pHPool)
     IpcHandles *pHandle = NULL;
     if ((pHandle = (IpcHandles *) calloc(1, sizeof(IpcHandles))) == NULL)
     {
-        DEBUG_LOG("%s\n", "calloc IpcHandles");
+        DDBG("%s\n", "calloc IpcHandles");
         return -1;
     }
 
@@ -111,7 +103,7 @@ int IpcThrPoolInit(IpcHandlePool *pHPool, int iNumHandles)
 
     if (pthread_mutex_init(&pHPool->Lock, NULL))
     {
-        DEBUG_LOG("%s\n", "mutex init");
+        DDBG("%s\n", "mutex init");
         return -1;
     }
 
@@ -119,7 +111,7 @@ int IpcThrPoolInit(IpcHandlePool *pHPool, int iNumHandles)
     if (pthread_cond_init(&pHPool->Cond, NULL))
     {
         pthread_mutex_destroy(&pHPool->Lock);
-        DEBUG_LOG("%s\n", "cond_init");
+        DDBG("%s\n", "cond_init");
         return -1;
     }
 
@@ -130,7 +122,7 @@ int IpcThrPoolInit(IpcHandlePool *pHPool, int iNumHandles)
     {
         if (0 != AddHandleToThrPool(pHPool))
         {
-            DEBUG_LOG("%s\n", "add to thrpool");
+            DDBG("%s\n", "add to thrpool");
             result = -1;
             break;
         }

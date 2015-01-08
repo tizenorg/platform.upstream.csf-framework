@@ -37,7 +37,9 @@ void TerminateAllProcess(const char *szName);
 pid_t StartServerStub(void);
 void CleanupReply(char ***pArr, int *pLen);
 char *GetNextUnsupportedMethodN(char **req_argv);
-void ConSendMessage(TestCase *pCtx, IpcClientInfo *pInfo, ConTestContext conCtxs[],
+void ConSendMessage(TestCase *pCtx, TSC_IPC_HANDLE hIpc, ConTestContext conCtxs[],
                     pthread_t threads[], int lenCtxs, MethodCall methods[], int timeout);
 
+void BackupEngine();
+void RestoreEngine();
 #endif  /* TSCTESTUTILS_H */
