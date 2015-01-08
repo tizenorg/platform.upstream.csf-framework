@@ -33,8 +33,10 @@
 #define TSCTEST_H
 
 #include <setjmp.h>
+#include "Debug.h"
 #include "IpcClient.h"
 #include "IpcServer.h"
+#include "IpcTypes.h"
 
 #ifdef __cplusplus 
 extern "C" {
@@ -56,20 +58,6 @@ extern "C" {
 
 /* Sleep interval for thread context switch. */
 #define SLEEP_INTERVAL 500
-#if defined(DEBUG)
-#define DEBUG_LOG(_fmt_, _param_...) { \
-                                        FILE *fp = fopen("/tmp/tpcsserdaemontestlog.txt", "a"); \
-                                        if (fp != NULL) \
-                                        { \
-                                            printf("%s,%d: " _fmt_, __FILE__, __LINE__, ##_param_); \
-                                            fprintf(fp, "%s,%d: " _fmt_, __FILE__, __LINE__, ##_param_); \
-                                            fclose(fp); \
-                                        } \
-                                       }
-#else
-#define DEBUG_LOG(_fmt_, _param_...)
-#endif
-
 
 /* Output methods. */
 #define LOG_OUT(fmt, x...) printf("Log:"fmt, ##x)
@@ -117,12 +105,6 @@ extern "C" {
 #define TSC_BACKUP_CONTENT_DIR "contents_bak"
 
 /**
- * Asynchronous methods callback signatures.
- */
-typedef void (*Callback)(void *pPrivate, int argc, char **argv);
-
-
-/**
  * Test case information data
  */
 typedef struct TestCase_struct
@@ -138,10 +120,10 @@ typedef struct ConTestContext_struct
 {
     TestCase *pTestCtx;
     const char *szMethod; /* Server method to be called inside thread. */
-    IpcClientInfo *pInfo;
+    TSC_IPC_HANDLE hIpc;
     int timeout;
     int iCid; /* Concurrency test id. */
-    Callback cbReply;
+    TSCCallback cbReply;
 
     /* Report concurrency test status. 1 - success, -1 - failure, 0 - running. */
     int iConTestRet;    /* Return value from Concurrent thread, which makes async call */
@@ -151,9 +133,9 @@ typedef struct ConTestContext_struct
 
 typedef struct MethodCall_struct
 {
-    const char *szMethod;
+    char *szMethod;
     int isAsync;  /* 0 = Synchronous; 1 = Asynchronous ; 2 = Cancel*/
-    Callback pfnCallback;
+    TSCCallback pfnCallback;
 } MethodCall;
 
 
@@ -186,7 +168,7 @@ typedef struct MethodCall_struct
     <Path>/sdcard</Path>\n \
     </AppPaths>\n\
     <Active>\n\
-        <AppId>xxxxx</AppId>\n\
+        <AppId>None</AppId>\n\
     </Active>\n\
     <Plugins>\n\
     </Plugins>\n\

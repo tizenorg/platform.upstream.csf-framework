@@ -46,7 +46,7 @@ extern "C" {
  * Forward Declarations.
  */
 /*struct IpcServerInfo;*/
-
+typedef struct _IpcServerInfo IpcServerInfo;
 
 /**
  * Keep registered methods list
@@ -64,8 +64,8 @@ typedef struct _IpcMethodHandle
 {
     IpcServerMethod *pMethod;
     void *pData;
-    struct IpcServerInfo *pInfo;
-    char unique_id[MSGHANDLE_LEN]; //uniquely identify the running method
+    IpcServerInfo *pInfo;
+    char unique_id[MSGHANDLE_LEN + 1]; //uniquely identify the running method
     int iCancel;  // 1 is cancel, 0 not cancel
     char *cStatus;    // any status
     pthread_mutex_t Lock;
@@ -76,9 +76,9 @@ typedef struct _IpcMethodHandle
 /**
  *  Single context per server connection.
  */
-typedef struct _IpcServerInfo
+struct _IpcServerInfo
 {
-    char name[TSC_SERVER_NAME_LEN];
+    char name[TSC_SERVER_NAME_LEN + 1];
     DBusConnection *pConn;
     IpcServerMethodList *pMethodList;   // available methods list
     char rule[TSC_INFO_RULE_LEN];
@@ -90,7 +90,7 @@ typedef struct _IpcServerInfo
     int count;
     IpcMethodHandle *pRunningMethods;  // current running methods
     pthread_mutex_t Lock;   // mutex to manage methods - iteration, add, remove.
-} IpcServerInfo;
+};
 
 
 /**
@@ -105,7 +105,7 @@ typedef struct _IpcAsyncInfo
     char **argv;
     IpcServerMethod *pMethod;
     IpcHandles *pHandle;
-    char async_unique_id[MSGHANDLE_LEN]; //uniquely identify the running method
+    char async_unique_id[MSGHANDLE_LEN + 1]; //uniquely identify the running method
 } IpcAsyncInfo;
 
 int _IpcServerInit(IpcServerInfo *pServerInfo, char *szServiceName);

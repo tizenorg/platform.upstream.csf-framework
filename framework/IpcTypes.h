@@ -29,32 +29,44 @@
     OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef TPCS_SER_DAEMON_TESTUTILS_H
-#define TPCS_SER_DAEMON_TESTUTILS_H
-#include <libxml/xmlreader.h>
-#include <libxml/xmlwriter.h>
-#include <libxml/parser.h>
-#include <libxml/tree.h>
-#include <libxml/xpath.h>
-#include <libxml/xpathInternals.h>
+#ifndef IPCTYPES_H
+#define IPCTYPES_H
 
+/**
+ * \file IpcTypes.h
+ * \brief Data types and structs for Security framework IPC clients.
+ *
+ * This file provides the data types and structs needed by clients of Security framework IPC.
+ */
 
-int TerminateProcess(pid_t pid);
-void TerminateAllProcess(const char *szName);
-pid_t StartTPCSSerDaemon(void);
-pid_t AddPlugApp(void);
+/*==================================================================================================
+                                 STRUCTURES AND OTHER TYPEDEFS
+==================================================================================================*/
 
-void CleanupReply(char ***pArr, int *pLen);
-char *GetNextUnsupportedMethodN(char **req_argv);
-void ConSendMessage(TestCase *pCtx, TSC_IPC_HANDLE hIpc, ConTestContext conCtxs[],
-                    pthread_t threads[], int lenCtxs, MethodCall methods[], int timeout);
-void InThreadSendMessageAsync(TestCase *pCtx, TSC_IPC_HANDLE hIpc,
-                              ConTestContext conCtxs[], int lenCtxs,
-                              MethodCall methods[], int timeout);
-void InThreadSendMessageCancelAsync(TestCase *pCtx, TSC_IPC_HANDLE hIpc,
-                                    ConTestContext conCtxs[], int lenCtxs,
-                                    MethodCall methods[], int timeout);
-pid_t StartTPCSServerStub(void);
-int HasNode(const char *xpath, const char *appId);
+/**
+ * \brief CallBack Function type for Async method supported by the IPC.
+ *
+ * \param[in] pPrivate API caller's context information, supplied with TSCSendMessageAsync earlier.
+ * \param[in] argc Length of the string in argv.
+ * \param[in] argv Array of strings representing result value of asynchronous reply.
+ */
+typedef void (*TSCCallback)(void *pPrivate, int argc, const char **argv);
 
-#endif  /* TPCS_SER_DAEMON_TESTUTILS_H */
+/**
+ * Client side IPC handles.
+ */
+#define TSCHANDLE(n) struct n##_struct { int iDummy; }; typedef struct n##_struct *n
+
+/**
+ * IPC client handle.
+ */
+TSCHANDLE(TSC_IPC_HANDLE);
+#define INVALID_IPC_HANDLE ((TSC_IPC_HANDLE) NULL)
+
+/**
+ * Asynchronous call handle.
+ */
+TSCHANDLE(TSC_CALL_HANDLE);
+
+#endif  /* IPCTYPES_H */
+

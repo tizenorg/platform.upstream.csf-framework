@@ -43,79 +43,49 @@ extern "C" {
  * This file provides the IPC Client API functions used by Security framework.
  */
 
-#include <dbus/dbus.h>
-
-#include "IpcMacros.h"
-
+#include "IpcTypes.h"
 
 /*==================================================================================================
                                  CONSTANTS & ENUMS
 ==================================================================================================*/
 #define DEF_TIMEOUT -1
 
-/*==================================================================================================
-                                 FORWARD DECLARATIONS
-==================================================================================================*/
-struct _ClientCallHandle;
-
-/*==================================================================================================
-                                 STRUCTURES AND OTHER TYPEDEFS
-==================================================================================================*/
-
-/**
- * Asynchronous call handle.
- */
-typedef struct _ClientCallHandle * TSC_CALL_HANDLE;
-
-/**
- * Data structure to encapsulate client side information of the IPC.
- */
-typedef struct _IpcClientInfo IpcClientInfo;
-
-/**
- * CallBack Function type for Async method supported by the IPC.
- *
- * \param[in] pPrivate API caller's context information, supplied with TSCSendMessageAsync earlier.
- * \param[in] argc Length of the string in argv.
- * \param[in] argv Array of strings representing result value of asynchronous reply.
- */
-typedef void (*TSCCallback)(void *pPrivate, int argc, char **argv);
 
 /*==================================================================================================
                                      FUNCTION PROTOTYPES
 ==================================================================================================*/
 
 /**
- * \brief Initializes and returns IPC info of client.
+ * \brief Initializes client side IPC and returns its handle.
  *
- * Opens and initialises the client side IPC structure using the security 
+ * Opens and initialises the handle to client side IPC using the security 
  * framework defaults.
  *
  * This is a synchronous API.
  *
- * \return Return Type (IpcClientInfo*) \n
- * Pointer to structure containing IPC info - on success. \n
+ * \return Return Type (TSC_IPC_HANDLE) \n
+ * Client IPC handle - on success. \n
  * NULL - on failure. \n
  */
-IpcClientInfo* IpcClientOpen(void);
+TSC_IPC_HANDLE IpcClientOpen(void);
 
 /**
  * \brief Requests the Security framework's IPC server and returns back the reply.
  *
  * This is a synchronous API.
  *
- * \param[in] pInfo Client side IPC info returned by IpcClientOpen().
+ * \param[in] hIpc IPC handle returned by IpcClientOpen().
  *
  * \return Return Type (void) \n
  */
-void IpcClientClose(IpcClientInfo *pInfo);
+void IpcClientClose(TSC_IPC_HANDLE hIpc);
 
 /**
  * \brief Requests the Security framework's IPC server and returns back the reply.
  *
  * This is a synchronous API.
  *
- * \param[in] pInfo Client side IPC info.
+ * \param[in] hIpc Client side IPC handle.
  * \param[in] szMethod Name of the method called.
  * \param[in] argc Number of parameters passed in argv.
  * \param[in] argv Array of strings representing parameters for method called.
@@ -127,7 +97,7 @@ void IpcClientClose(IpcClientInfo *pInfo);
  * 0 - on send success. \n
  * -1 - on send failure. \n
  */
-int TSCSendMessageN(IpcClientInfo *pInfo, const char *service_name, const char *szMethod, int argc,
+int TSCSendMessageN(TSC_IPC_HANDLE hIpc, const char *service_name, const char *szMethod, int argc,
                     char **argv, int *argc_reply, char ***argv_reply, int timeout_milliseconds);
 
 /**
@@ -135,11 +105,11 @@ int TSCSendMessageN(IpcClientInfo *pInfo, const char *service_name, const char *
  *
  * This is an asynchronous API.
  *
- * \param[in] pInfo Client side IPC info.
+ * \param[in] hIpc Client side IPC handle.
  * \param[in] szMethod Name of the method called.
  * \param[in] argc Number of parameters passed in argv.
  * \param[in] argv Array of strings representing parameters for method called.
- * \param[out] pCallHandle Pointer to handle of the asynchronous message sent.
+ * \param[out] phCallHandle Pointer to handle of the asynchronous message sent.
  * \param[in] pCallback Callback function for the asynchronous reply.
  * \param[in] pPrivate API caller's context information, to be supplied with callback.
  * \param[in] timeout_milliseconds Timeout in milliseconds. -1 for default or 0 for no timeout.
@@ -148,31 +118,31 @@ int TSCSendMessageN(IpcClientInfo *pInfo, const char *service_name, const char *
  * 0 - on send success. \n
  * Error code - on send failure. \n
  */
-int TSCSendMessageAsync(IpcClientInfo *pInfo, const char *service_name, const char *szMethod, int argc, char **argv,
-                        TSC_CALL_HANDLE *pCallHandle, TSCCallback pCallback, void *pPrivate,
+int TSCSendMessageAsync(TSC_IPC_HANDLE hIpc, const char *service_name, const char *szMethod, int argc, char **argv,
+                        TSC_CALL_HANDLE *phCallHandle, TSCCallback pCallback, void *pPrivate,
                         int timeout_milliseconds);
 
 /**
  * \brief Releases the asynchronous call handle.
  *
- * \param[in] callHandle handle of the asynchronous message sent earlier.
+ * \param[in] hCallHandle Handle of the asynchronous message sent earlier.
  */
-void TSCFreeSentMessageHandle(TSC_CALL_HANDLE callHandle);
+void TSCFreeSentMessageHandle(TSC_CALL_HANDLE hCallHandle);
 
 /**
- * Cancels an asynchronous request previously made to the Security framework's IPC server.
+ * \brief Cancels an asynchronous request previously made to the Security framework's IPC server.
  * On success, releases the handle of the previously called asynchronous method.
  *
  * This is an asynchronous API.
  *
- * \param[in] pInfo Client side IPC info.
- * \param[in] callHandle handle of the asynchronous message sent earlier.
+ * \param[in] hIpc Client side IPC handle.
+ * \param[in] hCallHandle Handle of the asynchronous message sent earlier.
  *
  * \return Return Type (int) \n
  * 0 - on send success. \n
  * Error code - on failure. \n
  */
-int TSCCancelMessage(IpcClientInfo *pInfo, TSC_CALL_HANDLE callHandle);
+int TSCCancelMessage(TSC_IPC_HANDLE hIpc, TSC_CALL_HANDLE hCallHandle);
 
 #ifdef __cplusplus
 }

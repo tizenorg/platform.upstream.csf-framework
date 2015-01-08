@@ -100,7 +100,7 @@ static pid_t StartProcess(const char *szPath, char *const argv[]);
 static pid_t StartProcess(const char *szPath, char *const argv[]);
 
 // For test cases needing concurrency.
-static void ConTestCaseCtor(ConTestContext *pConCtx, IpcClientInfo *pInfo, int iCid,
+static void ConTestCaseCtor(ConTestContext *pConCtx, TSC_IPC_HANDLE hIpc, int iCid,
                             TestCase *pCtx, const char *szMethod, int timeout);
 static void ConTestCaseDtor(ConTestContext *pConCtx);
 static int ConWaitOnTestCond(ConTestContext conCtxAry[], int len);
@@ -207,13 +207,13 @@ static int ConTestSuccess(ConTestContext *pConCtxAry, int len)
 }
 
 
-static void ConTestCaseCtor(ConTestContext *pConCtx, IpcClientInfo *pInfo, int iCid, TestCase *pCtx,
+static void ConTestCaseCtor(ConTestContext *pConCtx, TSC_IPC_HANDLE hIpc, int iCid, TestCase *pCtx,
                             const char *szMethod, int timeout)
 {
     pConCtx->pTestCtx = pCtx;
     pConCtx->szMethod = szMethod;
     pConCtx->timeout = timeout;
-    pConCtx->pInfo = pInfo;
+    pConCtx->hIpc = hIpc;
     pConCtx->iCid = iCid;
     pConCtx->iConTestRet = 0; /* running. */
     pConCtx->iConTestReplyRet = 0; /* running. */
@@ -274,7 +274,7 @@ static int ConWaitOnTestCond(ConTestContext conCtxAry[], int len)
 /**
  *
  */
-static void Callback_GetVer(void *pPrivate, int argc, char **argv)
+static void Callback_GetVer(void *pPrivate, int argc, const char **argv)
 {
     pthread_mutex_lock(&g_Mutex_cb);
     CONREPLYTEST_START
@@ -290,13 +290,10 @@ static void Callback_GetVer(void *pPrivate, int argc, char **argv)
 
     if (argc == 1 || argc == 0)
     {
-        DEBUG_LOG("%s\n", "Debug: Error returned from channel client");
+        DDBG("%s\n", "Debug: Error returned from channel client");
     }
 
-    // Cleanup - On both success and failure.
-    CleanupReply(&argv, &argc);
-    DEBUG_LOG("%s\n", "Callback done");
-    sleep(2);
+    DDBG("%s\n", "Callback done");
     CONREPLYTEST_RELEASE(pConCtx)
     pthread_mutex_unlock(&g_Mutex_cb);
 }
@@ -305,7 +302,7 @@ static void Callback_GetVer(void *pPrivate, int argc, char **argv)
 /**
  *
  */
-static void Callback_GetRep(void *pPrivate, int argc, char **argv)
+static void Callback_GetRep(void *pPrivate, int argc, const char **argv)
 {
     pthread_mutex_lock(&g_Mutex_cb);
     CONREPLYTEST_START
@@ -320,12 +317,10 @@ static void Callback_GetRep(void *pPrivate, int argc, char **argv)
 
     if (argc == 0 || argc == 1)
     {
-        DEBUG_LOG("%s\n", "Debug: Error returned from channel client");
+        DDBG("%s\n", "Debug: Error returned from channel client");
     }
 
-    // Cleanup - On both success and failure.
-    CleanupReply(&argv, &argc);
-    DEBUG_LOG("%s\n", "Callback done");
+    DDBG("%s\n", "Callback done");
     sleep(2);
     CONREPLYTEST_RELEASE(pConCtx)
     pthread_mutex_unlock(&g_Mutex_cb);
@@ -348,7 +343,7 @@ static void *ConSendMessageProc(void *pData)
 
     pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, &iOldType);
 
-    if (TSCSendMessageN(pConCtx->pInfo, TSC_DBUS_SERVER_WP_CHANNEL, pConCtx->szMethod, req_argc, req_argv, &rep_argc,
+    if (TSCSendMessageN(pConCtx->hIpc, TSC_DBUS_SERVER_WP_CHANNEL, pConCtx->szMethod, req_argc, req_argv, &rep_argc,
                               &rep_argv, pConCtx->timeout) == 0)
     {
         if (strcmp(pConCtx->szMethod, TWPGETVERSIONMETHOD) == 0)
@@ -362,7 +357,7 @@ static void *ConSendMessageProc(void *pData)
             }
             else
             {
-                DEBUG_LOG("Debug: call did not succeed with result code %s", rep_argv[0]);
+                DDBG("Debug: call did not succeed with result code %s", rep_argv[0]);
             }
         }
 
@@ -376,14 +371,14 @@ static void *ConSendMessageProc(void *pData)
             }
             else
             {
-                DEBUG_LOG("Debug: call did not succeed with result code %s", rep_argv[0]);
+                DDBG("Debug: call did not succeed with result code %s", rep_argv[0]);
             }
             sleep(3);
         }
     }
     else
     {
-        DEBUG_LOG("Error while sending message");
+        DDBG("Error while sending message");
     }
 
     CONTEST_RELEASE(pConCtx)
@@ -403,7 +398,6 @@ static void *ConSendMessageProcAsync(void *pData)
     // Request args.
     int req_argc = 1;
     char *req_argv[] = {"www.zcrack.com"};
-    int iResult = -1;
 
     CONREPLYTEST_START
 
@@ -413,16 +407,18 @@ static void *ConSendMessageProcAsync(void *pData)
 
     if (strcmp(pConCtx->szMethod, TWPGETVERSIONMETHOD) == 0)
     {
-        if (TSCSendMessageAsync(pConCtx->pInfo, TSC_DBUS_SERVER_WP_CHANNEL, pConCtx->szMethod, req_argc, req_argv,
+        if (TSCSendMessageAsync(pConCtx->hIpc, TSC_DBUS_SERVER_WP_CHANNEL, pConCtx->szMethod, req_argc, req_argv,
                                       &handle, Callback_GetVer, pConCtx, pConCtx->timeout) != 0)
-            DEBUG_LOG("Debug: Error while sending message TSCSendMessageAsync\n");
+            DDBG("Debug: Error while sending message TSCSendMessageAsync\n");
+        
+        sleep(4);
     }
 
     if (strcmp(pConCtx->szMethod, TWPGETURLREPUTATIONMETHOD) == 0)
     {
-        if (TSCSendMessageAsync(pConCtx->pInfo, TSC_DBUS_SERVER_WP_CHANNEL, pConCtx->szMethod, req_argc, req_argv,
+        if (TSCSendMessageAsync(pConCtx->hIpc, TSC_DBUS_SERVER_WP_CHANNEL, pConCtx->szMethod, req_argc, req_argv,
                                       &handle, Callback_GetRep, pConCtx, pConCtx->timeout) != 0)
-            DEBUG_LOG("Debug: Error while sending message TSCSendMessageAsync\n");
+            DDBG("Debug: Error while sending message TSCSendMessageAsync\n");
 
         sleep(3);
     }
@@ -436,7 +432,7 @@ static void *ConSendMessageProcAsync(void *pData)
 /**
  *
  */
-void ConSendMessage(TestCase *pCtx, IpcClientInfo *pInfo, ConTestContext conCtxs[],
+void ConSendMessage(TestCase *pCtx, TSC_IPC_HANDLE hIpc, ConTestContext conCtxs[],
                     pthread_t threads[], int lenCtxs, MethodCall methods[], int timeout)
 {
     int i, iRet = 0;
@@ -444,11 +440,11 @@ void ConSendMessage(TestCase *pCtx, IpcClientInfo *pInfo, ConTestContext conCtxs
     TestCase TestCtx = *pCtx;
 
     /* Basic validation */
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     /* Prepare for concurrency tests. */
     for (i = 0; i < lenCtxs; i++)
-        ConTestCaseCtor(&conCtxs[i], pInfo, i + 1, pCtx, methods[i].szMethod, timeout);
+        ConTestCaseCtor(&conCtxs[i], hIpc, i + 1, pCtx, methods[i].szMethod, timeout);
 
     /* Concurrency tests. */
     for (i = 0; i < lenCtxs; i++)
@@ -551,7 +547,7 @@ pid_t StartServerStub(void)
 
 void CleanupReply(char ***pArr, int *pLen)
 {
-    if (pArr) {
+    if (pArr && *pArr) {
         while (*pLen)
             free ((*pArr)[--(*pLen)]);
 
@@ -631,7 +627,7 @@ void RestoreEngine()
 
     if (pszRoot != NULL)
     {
-        char szCommand[1024];
+        char szCommand[1024] = {0};
 
         sprintf(szCommand, "cp -f %s/backup/libwpengine.so /opt/usr/share/sec_plugin/", pszRoot);
         CallSys(szCommand);
@@ -649,8 +645,7 @@ void RemoveEngine()
     if (pszRoot != NULL)
     {
         LOG_OUT("Remove Engine 1");
-        char szCommand[1024];
-        sprintf(&szCommand, "rm -f /opt/usr/share/sec_plugin/libwpengine.so");
+        char szCommand[1024] = "rm -f /opt/usr/share/sec_plugin/libwpengine.so";
         CallSys(szCommand);
         PutTestRoot(pszRoot);
     }

@@ -393,7 +393,7 @@ int TCSGetVersion(TCSLIB_HANDLE hLib, TCSVerInfo *pVerInfo);
 /**
  * \brief Gets the meta information about the plugin
  * \param[in] hLib instance handle obtained from a call to the TCSLibraryOpen().
- * \param[out] pszInfo string containing meta info
+ * \param[out] pszInfo string containing meta info, pszInfo allocated by caller of size TCS_META_MAX.
  *
  * \return Return Type (int) \n
  * 0 - on success. \n

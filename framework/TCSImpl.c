@@ -36,26 +36,12 @@
 #include <pthread.h>
 #include <string.h>
 
+#include "Debug.h"
 #include "TCSImpl.h"
 #include "TCSErrorCodes.h"
 
 
 #define TCS_CONSTRUCT_ERRCODE(m, e) (((m) << 24) | (e))
-
-#if defined(DEBUG)
-#define DEBUG_LOG(_fmt_, _param_...) { \
-                                        FILE *fp = fopen("/tmp/csframelog.txt", "a"); \
-                                        if (fp != NULL) \
-                                        { \
-                                            printf("%s,%d: " _fmt_, __FILE__, __LINE__, ##_param_); \
-                                            fprintf(fp, "%s,%d: " _fmt_, __FILE__, __LINE__, ##_param_); \
-                                            fclose(fp); \
-                                        } \
-                                       }
-#else
-#define DEBUG_LOG(_fmt_, _param_...)
-#endif
-
 
 #define PLUGIN_PATH "/opt/usr/share/sec_plugin/libengine.so"
 
@@ -112,7 +98,7 @@ TCSLIB_HANDLE TCSLibraryOpen(void)
 {
     PluginContext *pCtx = NULL;
 
-    DEBUG_LOG("%s", "tcs lib open\n");
+    DDBG("%s", "tcs lib open\n");
     pCtx = LoadPlugin();
     if (pCtx != NULL)
     {
@@ -121,11 +107,11 @@ TCSLIB_HANDLE TCSLibraryOpen(void)
             free(pCtx);
             return INVALID_TCSLIB_HANDLE;
         }
-        DEBUG_LOG("%s", "call to TCSPLibraryOpen\n");
+        DDBG("%s", "call to TCSPLibraryOpen\n");
         pCtx->hLib = (*pCtx->pfLibraryOpen)();
         if (pCtx->hLib == INVALID_TCSLIB_HANDLE)
         {
-            DEBUG_LOG("%s", "failed to open engine\n");
+            DDBG("%s", "failed to open engine\n");
             if (pCtx->pPlugin != NULL)
                 dlclose(pCtx->pPlugin);
             free(pCtx);
@@ -160,11 +146,13 @@ int TCSGetVersion(TCSLIB_HANDLE hLib, TCSVerInfo *pVerInfo)
     char const *pPluginVer = (*pCtx->pfGetVersion)();
 
     if (pPluginVer != NULL)
-        strncpy(pVerInfo->szPluginVer, pPluginVer, TCS_VER_MAX);
+        strncpy(pVerInfo->szPluginVer, pPluginVer, TCS_VER_MAX - 1);
     else
-        strncpy(pVerInfo->szPluginVer, "NULL", TCS_VER_MAX);
+        strncpy(pVerInfo->szPluginVer, "NULL", TCS_VER_MAX - 1);
 
-    DEBUG_LOG("%s %s %s\n", "Framework|Plugin version = ",
+    pVerInfo->szPluginVer[TCS_VER_MAX - 1] = '\0';
+
+    DDBG("%s %s %s\n", "Framework|Plugin version = ",
               pVerInfo->szFrameworkVer, pVerInfo->szPluginVer);
 
     return 0;
@@ -186,10 +174,12 @@ int TCSGetInfo(TCSLIB_HANDLE hLib, char *pszInfo)
 
     char const *pszInfoPlugin = (*pCtx->pfGetInfo)();
 
-    if (pszInfo != NULL)
-        strncpy(pszInfo, pszInfoPlugin, TCS_META_MAX);
+    if (pszInfoPlugin != NULL)
+        strncpy(pszInfo, pszInfoPlugin, TCS_META_MAX - 1);
     else
-        strncpy(pszInfo, "NULL", TCS_META_MAX);
+        strncpy(pszInfo, "NULL", TCS_META_MAX - 1);
+
+    pszInfo[TCS_META_MAX - 1] = '\0';
 
     return 0;
 }
@@ -321,7 +311,7 @@ void *TCSScanDataAsyncWorker(void *pTData)
     {
         if (pCtx == NULL || pCtx->pfScanFile == NULL)
         {
-            DEBUG_LOG("%s", "failed to open engine\n");
+            DDBG("%s", "failed to open engine\n");
             pTCSScanParam->pfCallBack(pTCSScanParam->pPrivate, TCS_CB_SCANFINISH, NULL);
             break;
         }
@@ -350,7 +340,7 @@ void *TCSScanDataAsyncWorker(void *pTData)
 
 int TCSScanDataAsync(TCSLIB_HANDLE hLib, TCSScanParam *pParam)
 {
-    ThreadScanData *pThreadData = malloc(sizeof(ThreadScanData));
+    ThreadScanData *pThreadData = calloc(1, sizeof(ThreadScanData));
 
     int rc = -1;
 
@@ -399,7 +389,7 @@ void *TCSScanFileAsyncWorker(void *pTData)
     {
         if (pCtx == NULL || pCtx->pfScanFile == NULL)
         {
-            DEBUG_LOG("%s", "failed to open engine\n");
+            DDBG("%s", "failed to open engine\n");
             pThreadData->pfCallBack(pThreadData->pPrivate, TCS_CB_SCANFINISH, NULL);
             break;
         }
@@ -432,7 +422,7 @@ int TCSScanFileAsync(TCSLIB_HANDLE hLib, char const *pszFileName, int iDataType,
         int iAction, int iCompressFlag, void *pPrivate, 
         int (*pfCallBack)(void *pPrivate, int iReason, void *pParam))
 {
-    ThreadScanFileData *pThreadData = malloc(sizeof(ThreadScanFileData));
+    ThreadScanFileData *pThreadData = calloc(1, sizeof(ThreadScanFileData));
 
     int rc = -1;
 
@@ -475,7 +465,7 @@ static PluginContext *LoadPlugin(void)
 {
     PluginContext *pCtx = NULL;
     void *pTmp = dlopen(PLUGIN_PATH, RTLD_LAZY);
-    DEBUG_LOG("%s", "load plugin\n");
+    DDBG("%s", "load plugin\n");
     if (pTmp != NULL)
     {
         FuncLibraryOpen TmpLibraryOpen;
@@ -490,10 +480,10 @@ static PluginContext *LoadPlugin(void)
         do
         {
             TmpLibraryOpen = dlsym(pTmp, "TCSPLibraryOpen");
-            DEBUG_LOG("%s", "load api TCSPLibraryOpen\n");
+            DDBG("%s", "load api TCSPLibraryOpen\n");
             if (TmpLibraryOpen == NULL)
             {
-                DEBUG_LOG("Failed to load TCSPLibraryOpen in %s\n", PLUGIN_PATH);
+                DDBG("Failed to load TCSPLibraryOpen in %s\n", PLUGIN_PATH);
                 dlclose(pTmp);
                 break;
             }
@@ -501,7 +491,7 @@ static PluginContext *LoadPlugin(void)
             TmpLibraryClose = dlsym(pTmp, "TCSPLibraryClose");
             if (TmpLibraryClose == NULL)
             {
-                DEBUG_LOG("Failed to load TCSPLibraryClose in %s\n", PLUGIN_PATH);
+                DDBG("Failed to load TCSPLibraryClose in %s\n", PLUGIN_PATH);
                 dlclose(pTmp);
                 break;
             }
@@ -509,7 +499,7 @@ static PluginContext *LoadPlugin(void)
             TmpGetLastError = dlsym(pTmp, "TCSPGetLastError");
             if (TmpGetLastError == NULL)
             {
-                DEBUG_LOG("Failed to load TCSPGetLastError in %s\n", PLUGIN_PATH);
+                DDBG("Failed to load TCSPGetLastError in %s\n", PLUGIN_PATH);
                 dlclose(pTmp);
                 break;
             }
@@ -517,7 +507,7 @@ static PluginContext *LoadPlugin(void)
             TmpScanData = dlsym(pTmp, "TCSPScanData");
             if (TmpScanData == NULL)
             {
-                DEBUG_LOG("Failed to load TCSPScanData in %s\n", PLUGIN_PATH);
+                DDBG("Failed to load TCSPScanData in %s\n", PLUGIN_PATH);
                 dlclose(pTmp);
                 break;
             }
@@ -525,7 +515,7 @@ static PluginContext *LoadPlugin(void)
             TmpScanFile = dlsym(pTmp, "TCSPScanFile");
             if (TmpScanFile == NULL)
             {
-                DEBUG_LOG("Failed to load TCSPScanFile in %s\n", PLUGIN_PATH);
+                DDBG("Failed to load TCSPScanFile in %s\n", PLUGIN_PATH);
                 dlclose(pTmp);
                 break;
             }
@@ -533,7 +523,7 @@ static PluginContext *LoadPlugin(void)
             TmpScanFileEx = dlsym(pTmp, "TCSPScanFileEx");
             if (TmpScanFileEx == NULL)
             {
-                DEBUG_LOG("Failed to load TCSPScanFileEx in %s\n", PLUGIN_PATH);
+                DDBG("Failed to load TCSPScanFileEx in %s\n", PLUGIN_PATH);
                 dlclose(pTmp);
                 break;
             }
@@ -541,7 +531,7 @@ static PluginContext *LoadPlugin(void)
             TmpGetVersion = dlsym(pTmp, "TCSPGetVersion");
             if(TmpGetVersion == NULL)
             {
-                DEBUG_LOG("Failed to load TCSPGetVersion in %s\n", PLUGIN_PATH);
+                DDBG("Failed to load TCSPGetVersion in %s\n", PLUGIN_PATH);
                 dlclose(pTmp);
                 break;
             }
@@ -549,7 +539,7 @@ static PluginContext *LoadPlugin(void)
             TmpGetInfo = dlsym(pTmp, "TCSPGetInfo");
             if(TmpGetInfo == NULL)
             {
-                DEBUG_LOG("Failed to load TCSPGetInfo in %s\n", PLUGIN_PATH);
+                DDBG("Failed to load TCSPGetInfo in %s\n", PLUGIN_PATH);
                 dlclose(pTmp);
                 break;
             }
@@ -574,7 +564,7 @@ static PluginContext *LoadPlugin(void)
     }
     else
     {
-        DEBUG_LOG("No plugin found. %s\n", dlerror());
+        DDBG("No plugin found. %s\n", dlerror());
     }
 
     return pCtx;

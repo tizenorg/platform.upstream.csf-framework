@@ -68,7 +68,7 @@ TWPSerGetVersion(void *pData, int req_argc, char **req_argv, char ***rep_argv, i
     TWP_RESULT iRes;
     char *szRes = NULL;
 
-    if (hLib == TWP_INVALID_HANDLE)
+    if (hLib == INVALID_TWPLIB_HANDLE)
     {
         iRes = TWP_INVALID_HANDLE;
         goto close_library;
@@ -129,9 +129,6 @@ close_library:
     if (szRes == NULL)
     {
         DERR("%s", "malloc returns error\n");
-        free((*rep_argv)[1]);
-        free((*rep_argv)[2]);
-        free((*rep_argv)[3]);
         goto err;
     }
     snprintf(szRes, RETURN_STATUS_STR_LEN, "%d", iRes);
@@ -139,6 +136,8 @@ close_library:
     if (*rep_argc == 1)
     {
         *rep_argv = (char **) malloc (sizeof(char*) * 1);
+        if (*rep_argv == NULL)
+            goto err;
     }
 
     //Assign result code.
@@ -148,8 +147,19 @@ close_library:
     return 0;
 
 err:
+    if (*rep_argv != NULL)
+    {
+        free((*rep_argv)[1]);
+        free((*rep_argv)[2]);
+        free((*rep_argv)[3]);
+    }
     *rep_argc = 0;
     free(*rep_argv);
+    *rep_argv = NULL;
+    rep_argv = NULL;
+    free(szRes);
+    TWPUninitLibrary(hLib);
+
     return -1;
 }
 
@@ -172,7 +182,7 @@ TWPSerGetURLReputation(void *pData, int req_argc, char **req_argv, char ***rep_a
     TWP_RESULT iRes;
     char *szRes = NULL;
 
-    if (hLib == TWP_INVALID_HANDLE)
+    if (hLib == INVALID_TWPLIB_HANDLE)
     {
         iRes = TWP_INVALID_HANDLE;
         goto close_library;
@@ -244,9 +254,6 @@ close_library:
     if (szRes == NULL)
     {
         DERR("%s", "malloc returns error\n");
-        free((*rep_argv)[1]);
-        free((*rep_argv)[2]);
-        free(*rep_argv);
         goto err;
     }
     snprintf(szRes, RETURN_STATUS_STR_LEN, "%d", iRes);
@@ -254,6 +261,8 @@ close_library:
     if (*rep_argc == 1)
     {
         *rep_argv = (char **) malloc (sizeof(char*) * 1);
+        if (*rep_argv == NULL)
+            goto err;
     }
     //Assign Result code
     (*rep_argv)[0] = szRes;
@@ -262,8 +271,17 @@ close_library:
     return 0;
 
 err:
+    if (*rep_argv != NULL)
+    {
+        free((*rep_argv)[1]);
+        free((*rep_argv)[2]);
+    }
     *rep_argc = 0;
     free(*rep_argv);
+    *rep_argv = NULL;	
+    rep_argv = NULL;
+    free(szRes);
+    TWPUninitLibrary(hLib);
     return -1;
 }
 
@@ -283,7 +301,7 @@ main(int argc, char **argv)
         // Register methods for get url reputation
         IpcServerMethod method_1;
         snprintf(method_1.szMethod, sizeof(method_1.szMethod), "%s", "TWPSerGetURLReputation");
-        method_1.method = TWPSerGetURLReputation;
+        method_1.method = (METHODFUNC) TWPSerGetURLReputation;
         method_1.pData = NULL;
 
         if (IpcServerAddMethod(hServer, &method_1) != 0)
@@ -295,7 +313,7 @@ main(int argc, char **argv)
         // Register methods for getversion
         IpcServerMethod method_2;
         snprintf(method_2.szMethod, sizeof(method_2.szMethod), "%s", "TWPSerGetVersion");
-        method_2.method = TWPSerGetVersion;
+        method_2.method = (METHODFUNC) TWPSerGetVersion;
         method_2.pData = NULL;
 
         if (IpcServerAddMethod(hServer, &method_2) != 0)

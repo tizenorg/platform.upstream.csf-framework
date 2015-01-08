@@ -45,6 +45,7 @@
 
 /* Constants */
 #define DEF_TIMEOUT -1
+#define TIMES 10
 
 /* Test cases. */
 static void TWPSerDaemonStartup(void);
@@ -53,8 +54,8 @@ static void TWPSerDaemonGetVerSendMessageN_001(void);
 static void TWPSerDaemonGetVerSendMessageN_002(void);
 static void TWPSerDaemonGetVerSendMessageN_003(void);
 static void TWPSerDaemonGetVerSendMessageN_004(void);
+static void TWPSerDaemonGetVerSendMessageSync_001(void);
 static void TWPSerDaemonGetVerSendMessageAsync_001(void);
-static void TWPSerDaemonGetVerSendMessageAsync_002(void);
 static void TWPSerDaemonGetRepSendMessageN_001(void);
 static void TWPSerDaemonGetRepSendMessageN_002(void);
 static void TWPSerDaemonGetRepSendMessageN_003(void);
@@ -90,8 +91,8 @@ static void TestCases(void)
     TWPSerDaemonGetVerSendMessageN_002();
     TWPSerDaemonGetVerSendMessageN_003();
     TWPSerDaemonGetVerSendMessageN_004();
+    TWPSerDaemonGetVerSendMessageSync_001();
     TWPSerDaemonGetVerSendMessageAsync_001();
-    TWPSerDaemonGetVerSendMessageAsync_002();
     TWPSerDaemonGetRepSendMessageN_001();
     TWPSerDaemonGetRepSendMessageN_002();
     TWPSerDaemonGetRepSendMessageN_003();
@@ -110,7 +111,7 @@ static void TestCases(void)
 static void TWPSerDaemonGetVerSendMessageN_001(void)
 {
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     // Request args.
     int req_argc = 0;
@@ -121,13 +122,13 @@ static void TWPSerDaemonGetVerSendMessageN_001(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
     TESTCASECTOR(&TestCtx, __FUNCTION__);
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     /* Sending message without server should return failure. */
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETVERSIONMETHOD,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETVERSIONMETHOD,
                               req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult != 0);
 
@@ -135,7 +136,7 @@ static void TWPSerDaemonGetVerSendMessageN_001(void)
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 }
 
 
@@ -146,7 +147,7 @@ static void TWPSerDaemonGetVerSendMessageN_002(void)
 {
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     // Request args.
     int req_argc = 0;
@@ -157,14 +158,14 @@ static void TWPSerDaemonGetVerSendMessageN_002(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETVERSIONMETHOD,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETVERSIONMETHOD,
                               req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT);
 
     TEST_ASSERT((iResult == 0) && (rep_argc == 4));
@@ -177,7 +178,7 @@ static void TWPSerDaemonGetVerSendMessageN_002(void)
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
@@ -187,16 +188,10 @@ static void TWPSerDaemonGetVerSendMessageN_002(void)
  */
 static void TWPSerDaemonGetVerSendMessageN_003(void)
 {
-#if defined(TIMES)
-#undef TIMES
-#endif
-
-#define TIMES   100
-
     int i = 0;
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     // Request args.
     int req_argc = 0;
@@ -207,16 +202,16 @@ static void TWPSerDaemonGetVerSendMessageN_003(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
     LOG_OUT("Verbose: Please wait for test case to complete\n");
     for (i = 0; i < TIMES; ++i)
     {
-        iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETVERSIONMETHOD,
+        iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETVERSIONMETHOD,
                                   req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT);
 
         TEST_ASSERT((iResult == 0) && (rep_argc == 4));
@@ -225,14 +220,14 @@ static void TWPSerDaemonGetVerSendMessageN_003(void)
         TEST_ASSERT(strlen(rep_argv[2]) > 0);
         TEST_ASSERT(strncmp(rep_argv[3], TWP_DAEMON_VERSION, strlen(TWP_DAEMON_VERSION)) == 0);
         CleanupReply(&rep_argv, &rep_argc);
-        DEBUG_LOG("Sending Message to get Version (%d/%d)\n", i + 1, TIMES);
+        DDBG("Sending Message to get Version (%d/%d)\n", i + 1, TIMES);
     }
 
     TESTCASEDTOR(&TestCtx);
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
@@ -244,7 +239,7 @@ static void TWPSerDaemonGetVerSendMessageN_004(void)
 
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     // Request args.
     int req_argc = 0;
@@ -255,51 +250,46 @@ static void TWPSerDaemonGetVerSendMessageN_004(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     BackupEngine();
     system("rm -f /opt/usr/share/sec_plugin/libwpengine.so");
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETVERSIONMETHOD,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETVERSIONMETHOD,
                               req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT);
     RestoreEngine();
 
     TEST_ASSERT((iResult == 0) && (rep_argc == 1));
+    TEST_ASSERT(strncmp(rep_argv[0], "3", 1) == 0);
 
     TESTCASEDTOR(&TestCtx);
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
 /**
  * Multi-Thread Test case: [Sync method] Verify if we are able to do sync TWPGETVERSION in
- * the 2 threads.
+ * the 10 threads.
  */
-static void TWPSerDaemonGetVerSendMessageAsync_001(void)
+static void TWPSerDaemonGetVerSendMessageSync_001(void)
 {
-#if defined(TIMES)
-#undef TIMES
-#endif
-
-#define TIMES   100
-
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
     int i;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -311,7 +301,7 @@ static void TWPSerDaemonGetVerSendMessageAsync_001(void)
         methods[i].isAsync = 0;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
 
     for (i = 0; i < TIMES; i++)
@@ -321,7 +311,7 @@ static void TWPSerDaemonGetVerSendMessageAsync_001(void)
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 
     TerminateProcess(pidStub);
 }
@@ -330,25 +320,19 @@ static void TWPSerDaemonGetVerSendMessageAsync_001(void)
  * Multi-Thread Test case: [Async method] Verify if we are able to do async TWPGETVERSION in
  * the 2 threads.
  */
-static void TWPSerDaemonGetVerSendMessageAsync_002(void)
+static void TWPSerDaemonGetVerSendMessageAsync_001(void)
 {
-#if defined(TIMES)
-#undef TIMES
-#endif
-
-#define TIMES   100
-
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
     int i;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -360,7 +344,7 @@ static void TWPSerDaemonGetVerSendMessageAsync_002(void)
         methods[i].isAsync = 1;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
     for (i = 0; i < TIMES; i++)
     {
@@ -369,7 +353,7 @@ static void TWPSerDaemonGetVerSendMessageAsync_002(void)
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
@@ -380,8 +364,7 @@ static void TWPSerDaemonGetVerSendMessageAsync_002(void)
 static void TWPSerDaemonGetRepSendMessageN_001(void)
 {
     TestCase TestCtx;
-    pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     // Request args.
     int req_argc = 1;
@@ -392,12 +375,12 @@ static void TWPSerDaemonGetRepSendMessageN_001(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
     TESTCASECTOR(&TestCtx, __FUNCTION__);
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
                               req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT);
 
     TEST_ASSERT((iResult != 0));
@@ -406,7 +389,7 @@ static void TWPSerDaemonGetRepSendMessageN_001(void)
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 }
 
 
@@ -418,7 +401,7 @@ static void TWPSerDaemonGetRepSendMessageN_002(void)
 {
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     // Request args.
     int req_argc = 1;
@@ -429,13 +412,13 @@ static void TWPSerDaemonGetRepSendMessageN_002(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
                               req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT);
 
     TEST_ASSERT((iResult == 0) && (rep_argc == 3));
@@ -447,7 +430,7 @@ static void TWPSerDaemonGetRepSendMessageN_002(void)
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
@@ -459,7 +442,7 @@ static void TWPSerDaemonGetRepSendMessageN_003(void)
 {
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     // Request args.
     int req_argc = 1;
@@ -470,13 +453,13 @@ static void TWPSerDaemonGetRepSendMessageN_003(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
                               req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT);
 
     TEST_ASSERT((iResult == 0) && (rep_argc == 3));
@@ -488,7 +471,7 @@ static void TWPSerDaemonGetRepSendMessageN_003(void)
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
@@ -500,7 +483,7 @@ static void TWPSerDaemonGetRepSendMessageN_004(void)
 {
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     // Request args.
     int req_argc = 1;
@@ -511,14 +494,14 @@ static void TWPSerDaemonGetRepSendMessageN_004(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
                               req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT);
 
     TEST_ASSERT((iResult == 0) && (rep_argc == 2));
@@ -529,7 +512,7 @@ static void TWPSerDaemonGetRepSendMessageN_004(void)
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
@@ -541,7 +524,7 @@ static void TWPSerDaemonGetRepSendMessageN_005(void)
 {
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     // Request args.
     int req_argc = 1;
@@ -552,13 +535,13 @@ static void TWPSerDaemonGetRepSendMessageN_005(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
                               req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT);
 
     TEST_ASSERT((iResult == 0) && (rep_argc == 2));
@@ -569,7 +552,7 @@ static void TWPSerDaemonGetRepSendMessageN_005(void)
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
@@ -580,7 +563,7 @@ static void TWPSerDaemonGetRepSendMessageN_006(void)
 {
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     // Request args.
     int req_argc = 1;
@@ -591,25 +574,25 @@ static void TWPSerDaemonGetRepSendMessageN_006(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
     BackupEngine();
     system("rm -f /opt/usr/share/sec_plugin/libwpengine.so");
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
                               req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT);
     RestoreEngine();
     TEST_ASSERT((iResult == 0) && (rep_argc == 1));
-    TEST_ASSERT(strncmp(rep_argv[0], "500", 1) == 0);
+    TEST_ASSERT(strncmp(rep_argv[0], "3", 1) == 0);
 
     TESTCASEDTOR(&TestCtx);
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
@@ -618,15 +601,10 @@ static void TWPSerDaemonGetRepSendMessageN_006(void)
  */
 static void TWPSerDaemonGetRepSendMessageN_007(void)
 {
-#if defined(TIMES)
-#undef TIMES
-#endif
-
-#define TIMES 50
     int i = 0;
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     // Request args.
     int req_argc = 1;
@@ -636,18 +614,18 @@ static void TWPSerDaemonGetRepSendMessageN_007(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
     LOG_OUT("Verbose: Please wait for test case to complete\n");
 
     for (i = 0; i < TIMES; ++i)
     {
-        DEBUG_LOG("Debug: Sending message to get URL reputation (%d/%d)\n", i + 1, TIMES);
-        if (TSCSendMessageN(pInfo, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
+        DDBG("Debug: Sending message to get URL reputation (%d/%d)\n", i + 1, TIMES);
+        if (TSCSendMessageN(hIpc, TSC_DBUS_SERVER_WP_CHANNEL, TWPGETURLREPUTATIONMETHOD,
                                   req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT) == 0)
 		{
 		    if (rep_argc == 3)
@@ -658,12 +636,12 @@ static void TWPSerDaemonGetRepSendMessageN_007(void)
 		    }
 		    else
 		    {
-		        DEBUG_LOG("Debug: Error while receiving the reputation");
+		        DDBG("Debug: Error while receiving the reputation");
 		    }
 		}
 		else
 		{
-   	       DEBUG_LOG("Debug: Error while Sending message\n");
+   	       DDBG("Debug: Error while Sending message\n");
 		}
 
         CleanupReply(&rep_argv, &rep_argc);
@@ -674,7 +652,7 @@ static void TWPSerDaemonGetRepSendMessageN_007(void)
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
@@ -685,23 +663,17 @@ static void TWPSerDaemonGetRepSendMessageN_007(void)
  */
 static void TWPSerDaemonGetRepSendMessageAsync_001(void)
 {
-#if defined(TIMES)
-#undef TIMES
-#endif
-
-#define TIMES   50
-
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
     int i;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -713,7 +685,7 @@ static void TWPSerDaemonGetRepSendMessageAsync_001(void)
         methods[i].isAsync = 0;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
     for (i = 0; i < TIMES; i++)
     {
@@ -722,7 +694,7 @@ static void TWPSerDaemonGetRepSendMessageAsync_001(void)
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
@@ -732,22 +704,16 @@ static void TWPSerDaemonGetRepSendMessageAsync_001(void)
  */
 static void TWPSerDaemonGetRepSendMessageAsync_002(void)
 {
-#if defined(TIMES)
-#undef TIMES
-#endif
-
-#define TIMES   50
-
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
     int i;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -759,32 +725,26 @@ static void TWPSerDaemonGetRepSendMessageAsync_002(void)
         methods[i].isAsync = 1;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
 static void TWPSerDaemonGetRepGetVerSendAsync_001(void)
 {
-#if defined(TIMES)
-#undef TIMES
-#endif
-
-#define TIMES   50
-
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
     int i;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartServerStub();
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -802,7 +762,7 @@ static void TWPSerDaemonGetRepGetVerSendAsync_001(void)
         methods[i].isAsync = 1;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
     for (i = 0; i < TIMES; i++)
     {
@@ -811,7 +771,7 @@ static void TWPSerDaemonGetRepGetVerSendAsync_001(void)
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 

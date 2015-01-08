@@ -44,6 +44,7 @@
 #include <pthread.h>
 #include <signal.h>
 
+#include "Debug.h"
 #include "IpcMacros.h"
 #include "IpcServerError.h"
 #include "IpcServerHdr.h"
@@ -51,16 +52,11 @@
 
 
 #ifdef DEBUG
-#define DEBUG_LOG(_fmt_, _param_...)    \
-    { \
-        fprintf(stderr, "[TSC Server] %s %d " _fmt_, __FILE__, __LINE__, _param_); \
-    }
 #define DBUS_D_LOG(_dbusErr_, _fmt_, _param_...)    \
     { \
-        DEBUG_LOG("%s:%s; " _fmt_, _dbusErr_.name, _dbusErr_.message, _param_); \
+        DDBG("%s:%s; " _fmt_, _dbusErr_.name, _dbusErr_.message, _param_); \
     }
 #else
-#define DEBUG_LOG(_fmt_, _param_...)
 #define DBUS_D_LOG(_dbusErr_, _fmt_, _param_...)
 #endif
 
@@ -70,11 +66,9 @@ static void IterateList(IpcMethodHandle* pHandle)
     int count = 0;
     for(ph = pHandle; ph != NULL; ph = ph->pNext)
     {
-        DEBUG_LOG(".....handle addr: %u, uniqueid:%s, name:%s\n", ph, ph->unique_id, ph->pMethod->szMethod);
-        DEBUG_LOG("....pnext:%u\n", ph->pNext);
         count++;
     }
-    DEBUG_LOG(".....total count: %d\n", count);
+    DDBG(".....total count: %d\n", count);
 }
 
 inline DBusHandlerResult _IpcSendMessageAndUnref(DBusConnection *pConn, DBusMessage *pMsg)
@@ -159,16 +153,8 @@ void _FreeHandleConn(IpcServerInfo *pInfo)
     pthread_mutex_lock(&(pInfo->Lock));
     if (pInfo->pConn)
     {
-        DBusError dberr;
-        dbus_error_init(&dberr);
-
         dbus_connection_remove_filter(pInfo->pConn, _IpcServerMsgFilter, pInfo);
-        if (dbus_error_is_set(&dberr))
-        {
-            DEBUG_LOG("FreeHandleConn, remove_filter wrong:%s\n", dberr.message);
-        }
 	    pInfo->pConn = NULL;
-
     }
     pthread_mutex_unlock(&(pInfo->Lock));
 
@@ -203,7 +189,9 @@ int IpcServerAddMethod(TSC_SERVER_HANDLE hServer, IpcServerMethod *pMethod)
 	IpcServerMethod* tpMethod = calloc(1, sizeof(IpcServerMethod));
 	if (tpMethod == NULL)
 	{
-	    return -1;
+		free(pList);
+		pList = NULL;
+	    return r;
 	}
 	// Copy method
 
@@ -229,12 +217,11 @@ int IpcServerAddMethod(TSC_SERVER_HANDLE hServer, IpcServerMethod *pMethod)
 int IpcServerRemoveMethod(TSC_SERVER_HANDLE hServer, METHODFUNC method)
 {
     IpcServerInfo *pInfo = NULL;
-    IpcServerMethodList *pList = NULL;
     IpcServerMethodList **pPrev = NULL;
     IpcServerMethodList *pCurr = NULL;
     int r = TSC_ERROR_REMOVE_METHOD_NOT_FOUND;
 
-    DEBUG_LOG("%s\n", "IpcServerRemoveMethod");
+    DDBG("%s\n", "IpcServerRemoveMethod");
     if (INVALID_TSC_SERVER_HANDLE == hServer)
         return r;
 
@@ -244,10 +231,10 @@ int IpcServerRemoveMethod(TSC_SERVER_HANDLE hServer, METHODFUNC method)
     pthread_mutex_lock(&(pInfo->Lock));
 	for (pPrev = &pInfo->pMethodList; *pPrev; pPrev = &(*pPrev)->pNext)
 	{
-		DEBUG_LOG("REMOVE method list name :%s\n", (*pPrev)->pMethod->szMethod);
+		DDBG("REMOVE method list name :%s\n", (*pPrev)->pMethod->szMethod);
 		if ((*pPrev)->pMethod->method == method)
 		{
-			DEBUG_LOG("==== FIND REVMOE MOETHOD %s\n", " ");
+			DDBG("==== FIND REVMOE MOETHOD %s\n", " ");
 			pCurr = *pPrev;
 			*pPrev = (*pPrev)->pNext;
             r = 0;
@@ -269,16 +256,20 @@ int IpcServerRemoveMethod(TSC_SERVER_HANDLE hServer, METHODFUNC method)
 
 TSC_SERVER_HANDLE IpcServerOpen(char *service_name)
 {
-    DEBUG_LOG("IpcServerOpen: %s\n", service_name);
+    DDBG("IpcServerOpen: %s\n", service_name);
 	DBusError dberr;
+
+    if (!dbus_threads_init_default())
+    {
+        DDBG("failed dbus_threads_init_default %s\n", "");
+        goto err_ret;
+    }
+
 	dbus_error_init(&dberr);
 
-	dbus_threads_init_default();
-
-    dbus_validate_bus_name(service_name, &dberr);
-    if (dbus_error_is_set(&dberr))
+    if (!dbus_validate_bus_name(service_name, &dberr) && dbus_error_is_set(&dberr))
     {
-        DEBUG_LOG("it is invalid request name %s\n", "");
+        DDBG("it is invalid request name %s\n", "");
         goto err;
     }
 
@@ -296,11 +287,11 @@ TSC_SERVER_HANDLE IpcServerOpen(char *service_name)
 
 	if (_IpcServerInit(pInfo, service_name))
 	{
-	    DEBUG_LOG("IpcServerInit failed: %s\n", service_name);
+	    DDBG("IpcServerInit failed: %s\n", service_name);
 	    goto free_table;
 	}
 
-    //DEBUG_LOG("IpcServerOpen  success conn:%s\n", pInfo->name);
+    //DDBG("IpcServerOpen  success conn:%s\n", pInfo->name);
     dbus_error_free(&dberr);
     return (TSC_SERVER_HANDLE) pInfo;
 
@@ -308,11 +299,13 @@ free_table:
     SAFE_FREE(pInfo->pTable);
 
 free_info:
-    DEBUG_LOG("IpcServerOpen free_info, conn:%s\n", pInfo->name);
+    DDBG("IpcServerOpen free_info, conn:%s\n", pInfo->name);
     FREE(pInfo);
 
 err:
     dbus_error_free(&dberr);
+
+err_ret:
     return INVALID_TSC_SERVER_HANDLE;
 }
 
@@ -324,7 +317,7 @@ int IpcServerMainLoop(TSC_SERVER_HANDLE hServer)
         if (pInfo->lDbus_listen_thread)
         {
             pthread_join(pInfo->lDbus_listen_thread, NULL);
-            DEBUG_LOG("finsihed main loop:%s\n", "==========");
+            DDBG("finsihed main loop:%s\n", "==========");
         }
 
     }
@@ -335,7 +328,7 @@ void IpcServerClose(TSC_SERVER_HANDLE *hServer)
 	IpcServerInfo *pInfo = (IpcServerInfo *) *hServer;
 	if (pInfo != (IpcServerInfo*)INVALID_TSC_SERVER_HANDLE)
 	{
-	    DEBUG_LOG("IpcServerClose:%s\n", pInfo->name);
+	    DDBG("IpcServerClose:%s\n", pInfo->name);
 	    _WaitForListenThreadClose(pInfo);
 
 	    // Wait till no detachable thread is running
@@ -373,14 +366,14 @@ int _IpcServerInit(IpcServerInfo *pInfo, char *szServiceName)
     dbus_error_init(&dberr);
 
     pInfo->pConn = dbus_bus_get(DBUS_BUS_SYSTEM, &dberr);
-    if (dbus_error_is_set(&dberr))
+    if (pInfo->pConn == NULL && dbus_error_is_set(&dberr))
     {
         DBUS_D_LOG(dberr, "%s\n", "Server failed: connection NULL.");
         goto free_err;
     }
 
     ret = dbus_bus_request_name(pInfo->pConn, szServiceName, DBUS_NAME_FLAG_REPLACE_EXISTING, &dberr);
-    if (dbus_error_is_set(&dberr))
+    if (ret == -1 && dbus_error_is_set(&dberr))
     {
         DBUS_D_LOG(dberr, "%s\n", "server failed: request name.");
         goto free_conn;
@@ -389,14 +382,14 @@ int _IpcServerInit(IpcServerInfo *pInfo, char *szServiceName)
     // TODO: Why not allow DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER also?
     if (ret != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER)
     {
-    	DEBUG_LOG("server failed: Not primary owner :%d\n", ret);
+    	DDBG("server failed: Not primary owner :%d\n", ret);
         goto free_conn;
     }
 
     if (0 > snprintf(pInfo->rule, sizeof(pInfo->rule), "type='method_call', interface='%s'",
                      TSC_DBUS_INTERFACE))
     {
-        DEBUG_LOG("%s\n", "server failed: Unable to write rule");
+        DDBG("%s\n", "server failed: Unable to write rule");
         goto free_conn;
     }
 
@@ -407,9 +400,9 @@ int _IpcServerInit(IpcServerInfo *pInfo, char *szServiceName)
         goto free_conn;
     }
 
-    ret = dbus_connection_try_register_object_path(pInfo->pConn, TSC_DBUS_PATH, pInfo->pTable,
-                                                   pInfo, &dberr);
-    if (dbus_error_is_set(&dberr) || !ret)
+    if (!dbus_connection_try_register_object_path(pInfo->pConn, TSC_DBUS_PATH, pInfo->pTable,
+                                                   pInfo, &dberr)
+		&& dbus_error_is_set(&dberr))
     {
         DBUS_D_LOG(dberr, "%s\n", "server failed: register object path");
         goto free_match;
@@ -419,34 +412,34 @@ int _IpcServerInit(IpcServerInfo *pInfo, char *szServiceName)
 
     if (!dbus_connection_add_filter(pInfo->pConn, _IpcServerMsgFilter, pInfo, NULL))
     {
-    	DEBUG_LOG("%s\n", "server failed: add filter.");
+    	DDBG("%s\n", "server failed: add filter.");
         goto free_register;
     }
 
     if (!dbus_connection_get_unix_fd(pInfo->pConn, &pInfo->fd) || pInfo->fd < 0)
     {
-    	DEBUG_LOG("%s\n", "server failed: get fd.");
+    	DDBG("%s\n", "server failed: get fd.");
         goto free_filter;
     }
 
     pInfo->pHandlePool = calloc(1, sizeof(IpcHandlePool));
     if (pInfo->pHandlePool == NULL)
     {
-        DEBUG_LOG("%s\n", "Thread pool alloc failed.");
+        DDBG("%s\n", "Thread pool alloc failed.");
         goto free_filter;
     }
 
     ret = IpcThrPoolInit(pInfo->pHandlePool, TSC_THREAD_POOL_NUMBERS);
     if (ret)
     {
-        DEBUG_LOG("%s\n", "*****Failed in IpcThrPoolInit");
+        DDBG("%s\n", "*****Failed in IpcThrPoolInit");
         goto free_handle;
     }
 
     ret = pthread_mutex_init(&(pInfo->Lock), NULL);
     if (ret)
     {
-        DEBUG_LOG("Failed to init IpcServerInfo lock %d\n", ret);
+        DDBG("Failed to init IpcServerInfo lock %d\n", ret);
         goto free_pool;
     }
 
@@ -454,14 +447,14 @@ int _IpcServerInit(IpcServerInfo *pInfo, char *szServiceName)
     pMethodCancel = calloc(1, sizeof(IpcServerMethod));
     if (pMethodCancel == NULL)
     {
-        DEBUG_LOG("%s\n", "Cancel alloc failed.");
+        DDBG("%s\n", "Cancel alloc failed.");
         goto free_mutex;
     }
 
     ret = snprintf(pMethodCancel->szMethod, sizeof(pMethodCancel->szMethod), "%s", TSC_FN_CANCELMETHOD);
     if (ret < 0)
     {
-        DEBUG_LOG("%s\n", "Cancel create failed.");
+        DDBG("%s\n", "Cancel create failed.");
         goto free_method_cancel;
     }
 
@@ -470,23 +463,21 @@ int _IpcServerInit(IpcServerInfo *pInfo, char *szServiceName)
     ret = IpcServerAddMethod((TSC_SERVER_HANDLE) pInfo,  pMethodCancel);
     if (ret)
     {
-        DEBUG_LOG("%s\n", "Cancel add failed.");
+        DDBG("%s\n", "Cancel add failed.");
         goto free_method_cancel;
     }
-    FREE(pMethodCancel);
-
 
     IpcServerMethod *pMethodProgress = calloc(1, sizeof(IpcServerMethod));
     if (pMethodProgress == NULL)
     {
-        DEBUG_LOG("%s\n", "Progress alloc failed.");
+        DDBG("%s\n", "Progress alloc failed.");
         goto free_method_cancel;
     }
 
     ret = snprintf(pMethodProgress->szMethod, sizeof(pMethodProgress->szMethod), "%s", TSC_FN_PROGRESSMETHOD);
     if (ret < 0)
     {
-        DEBUG_LOG("%s\n", "Progress create failed.");
+        DDBG("%s\n", "Progress create failed.");
         goto free_method_progress;
     }
 
@@ -496,23 +487,21 @@ int _IpcServerInit(IpcServerInfo *pInfo, char *szServiceName)
     ret = IpcServerAddMethod((TSC_SERVER_HANDLE) pInfo, pMethodProgress);
     if (ret)
     {
-        DEBUG_LOG("%s\n", "Progress add failed.");
+        DDBG("%s\n", "Progress add failed.");
         goto free_method_progress;
     }
-    FREE(pMethodProgress);
-
 
     IpcServerMethod *pMethodShutdown = calloc(1, sizeof(IpcServerMethod));
     if (pMethodShutdown == NULL)
     {
-        DEBUG_LOG("%s\n", "shutdown alloc failed.");
+        DDBG("%s\n", "shutdown alloc failed.");
         goto free_method_progress;
     }
 
     ret = snprintf(pMethodShutdown->szMethod, sizeof(pMethodShutdown->szMethod), "%s", TSC_FN_SHUTDOWN);
     if (ret < 0)
     {
-        DEBUG_LOG("%s\n", "Shutdown create failed.");
+        DDBG("%s\n", "Shutdown create failed.");
         goto free_method_shutdown;
     }
 
@@ -522,19 +511,21 @@ int _IpcServerInit(IpcServerInfo *pInfo, char *szServiceName)
     ret = IpcServerAddMethod((TSC_SERVER_HANDLE) pInfo, pMethodShutdown);
     if (ret)
     {
-        DEBUG_LOG("%s\n", "Shutdown add failed.");
+        DDBG("%s\n", "Shutdown add failed.");
         goto free_method_shutdown;
     }
-    FREE(pMethodShutdown);
+    SAFE_FREE(pMethodShutdown);
+    SAFE_FREE(pMethodProgress);
+    SAFE_FREE(pMethodCancel);
 
     pthread_mutex_lock(&(pInfo->Lock));
 
     ret = pthread_create(&(pInfo->lDbus_listen_thread), NULL, _IpcPopMessage, (void *)pInfo);
-    DEBUG_LOG("Creating thrd for Server: %s\n", pInfo->name);
+    DDBG("Creating thrd for Server: %s\n", pInfo->name);
 
     if (ret)
     {
-        DEBUG_LOG("%s(%d)\n", "** FAILED to launch thread", ret);
+        DDBG("%s(%d)\n", "** FAILED to launch thread", ret);
         pInfo->start_server_flag = false;
         pthread_mutex_unlock(&(pInfo->Lock));
         goto free_mutex;
@@ -545,11 +536,11 @@ int _IpcServerInit(IpcServerInfo *pInfo, char *szServiceName)
 
     return 0;
 free_method_shutdown:
-    FREE(pMethodShutdown);
+    SAFE_FREE(pMethodShutdown);
 free_method_progress:
-    FREE(pMethodProgress);
+    SAFE_FREE(pMethodProgress);
 free_method_cancel:
-    FREE(pMethodCancel);
+    SAFE_FREE(pMethodCancel);
 free_mutex:
     pthread_mutex_destroy(&(pInfo->Lock));
 free_pool:
@@ -562,20 +553,18 @@ free_register:
     //dbus_connection_unregister_object_path(pInfo->pConn, TSC_DBUS_PATH);
 free_match:
     //dbus_bus_remove_match(pInfo->pConn, pInfo->rule, &dberr);
-free_name:
-    //dbus_bus_release_name(pInfo->pConn, szServiceName, &dberr);
 free_conn:
     //dbus_connection_close(pInfo->pConn); TODO: Why not????
 free_err:
     dbus_error_free(&dberr);
-    DEBUG_LOG("%s", "_IpcServerInit free_err before return -1\n");
+    DDBG("%s", "_IpcServerInit free_err before return -1\n");
 err:
     return -1;
 }
 
 void _IpcServerDeInit(TSC_SERVER_HANDLE hServer)
 {
-    DEBUG_LOG("%s\n", "IpcServerDeInit========");
+    DDBG("%s\n", "IpcServerDeInit========");
 	IpcServerInfo *pInfo = (IpcServerInfo *) hServer;
     if (pInfo)
     {
@@ -586,14 +575,14 @@ void _IpcServerDeInit(TSC_SERVER_HANDLE hServer)
         FreeIpcServerHandle((TSC_SERVER_HANDLE) pInfo);
     }
     //dbus_shutdown(); // for valgrind only
-    DEBUG_LOG("%s\n", "*_*_*_*_*_*_* Server is disconnected *_*_*_*_*_*_*_*_*");
+    DDBG("%s\n", "*_*_*_*_*_*_* Server is disconnected *_*_*_*_*_*_*_*_*");
 }
 
 
 DBusHandlerResult _IpcServerReplyMessage(DBusConnection *pConn, DBusMessage *pMsg,
                                                 char **pReply, int size)
 {
-    DEBUG_LOG("%s %d\n", "ReplyMessage size: ", size);
+    DDBG("%s %d\n", "ReplyMessage size: ", size);
     DBusMessage *pReplyMsg = NULL;
     DBusMessageIter    iter;
     int i;
@@ -612,7 +601,7 @@ DBusHandlerResult _IpcServerReplyMessage(DBusConnection *pConn, DBusMessage *pMs
     {
         if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &(pReply[i])))
         {
-            DEBUG_LOG("----- Replied string :%s\n", pReply[i]);
+            DDBG("----- Replied string :%s\n", pReply[i]);
             dbus_message_unref(pReplyMsg);
             return DBUS_HANDLER_RESULT_NEED_MEMORY;
         }
@@ -624,7 +613,7 @@ DBusHandlerResult _IpcServerReplyMessage(DBusConnection *pConn, DBusMessage *pMs
 DBusHandlerResult _IpcServerReplyError(DBusConnection *pConn, DBusMessage *pMsg,
                                               int iErrCode)
 {
-    DEBUG_LOG("%s\n", "IpcServerReplyError");
+    DDBG("%s\n", "IpcServerReplyError");
     DBusMessage *pErrMsg = NULL;
 
     if (!pConn || !pMsg)
@@ -640,16 +629,16 @@ DBusHandlerResult _IpcServerReplyError(DBusConnection *pConn, DBusMessage *pMsg,
 
 DBusHandlerResult _IpcServerMsgFilter(DBusConnection *pConn, DBusMessage *pMsg, void *pData)
 {
-    DEBUG_LOG("%s\n", "IpcServerMsgFilter");
+    DDBG("%s\n", "IpcServerMsgFilter");
     IpcServerInfo *pInfo = (IpcServerInfo*) pData;
     if (!pInfo)
     {
-    	DEBUG_LOG("%s\n", "not handled the server info");
+    	DDBG("%s\n", "not handled the server info");
         return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     }
     else if (dbus_message_is_signal(pMsg, DBUS_INTERFACE_LOCAL, "Disconnected"))
     {
-    	DEBUG_LOG("%s\n", "server is disconnected by signal");
+    	DDBG("%s\n", "server is disconnected by signal");
         IpcServerClose((TSC_SERVER_HANDLE*) pInfo);
         //return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
         return DBUS_HANDLER_RESULT_HANDLED;
@@ -663,42 +652,45 @@ DBusHandlerResult _IpcServerMsgHandler(void *user_data)
 {
     DBusHandlerResult ret = DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
     IpcAsyncInfo *pAsync = user_data;
-    DBusConnection *pConn = pAsync->pConn;
-    DBusMessage *pMsg = pAsync->pMsg;
-    IpcServerInfo *pInfo = pAsync->pInfo;
 
-
-    bool handle_flag = false;
-    if (pInfo)
+    if (pAsync)
     {
-        DEBUG_LOG("==IpcServerMsgHandler:%s\n", pInfo->name);
-        IpcServerMethodList **pPrev;
-        pthread_mutex_lock(&(pInfo->Lock));
-        for (pPrev = &pInfo->pMethodList; *pPrev; pPrev = &(*pPrev)->pNext)
+        DBusMessage *pMsg = pAsync->pMsg;
+        IpcServerInfo *pInfo = pAsync->pInfo;
+
+        bool handle_flag = false;
+        if (pInfo)
         {
-            if ((*pPrev) && (*pPrev)->pMethod)
+            DDBG("==IpcServerMsgHandler:%s\n", pInfo->name);
+            IpcServerMethodList **pPrev;
+            pthread_mutex_lock(&(pInfo->Lock));
+            for (pPrev = &pInfo->pMethodList; *pPrev; pPrev = &(*pPrev)->pNext)
             {
-                if (dbus_message_is_method_call(pMsg, TSC_DBUS_INTERFACE, (*pPrev)->pMethod->szMethod)){
-                    DEBUG_LOG("FOUND method: %s\n", (*pPrev)->pMethod->szMethod);
-                    handle_flag = true;
-                    pAsync->pMethod = (*pPrev)->pMethod;
-                    break;
+                if ((*pPrev) && (*pPrev)->pMethod)
+                {
+                    if (dbus_message_is_method_call(pMsg, TSC_DBUS_INTERFACE, (*pPrev)->pMethod->szMethod)){
+                        DDBG("FOUND method: %s\n", (*pPrev)->pMethod->szMethod);
+                        handle_flag = true;
+                        pAsync->pMethod = (*pPrev)->pMethod;
+                        break;
+                    }
                 }
             }
+            pthread_mutex_unlock(&(pInfo->Lock));
+            if (handle_flag)
+            {
+                return _IpcServerProcessMessage(pAsync);
+            }
         }
-        pthread_mutex_unlock(&(pInfo->Lock));
-        if (handle_flag)
+        if (ret == DBUS_HANDLER_RESULT_NOT_YET_HANDLED)
         {
-            return _IpcServerProcessMessage(pAsync);
+            if (pAsync->pInfo->pHandlePool)
+            {
+                IpcThrPoolPut(pAsync->pInfo->pHandlePool, pAsync->pHandle);
+            }
+            CleanupAsync(pAsync);
         }
-    }
-    if (ret == DBUS_HANDLER_RESULT_NOT_YET_HANDLED)
-    {
-        if (pAsync && pAsync->pInfo && pAsync->pInfo->pHandlePool)
-        {
-            IpcThrPoolPut(pAsync->pInfo->pHandlePool, pAsync->pHandle);
-        }
-        CleanupAsync(pAsync);
+
     }
 
     return ret;
@@ -706,7 +698,7 @@ DBusHandlerResult _IpcServerMsgHandler(void *user_data)
 
 int _ParseDBusMessage(DBusMessage *pMsg, int *pargc, char ***argv)
 {
-    DBusBasicValue temp = {0};
+    DBusBasicValue temp = {{0}};
     int argc = 0;
     int iSize = TSC_REPLY_MSG_COUNT_AVERAGE;
     DBusMessageIter iter;
@@ -718,7 +710,7 @@ int _ParseDBusMessage(DBusMessage *pMsg, int *pargc, char ***argv)
         {
             if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
             {
-                DEBUG_LOG("%s\n", "wrong type");
+                DDBG("%s\n", "wrong type");
                 if (argc == 0)
                     iSize = 0;
                 iRet = TSC_ERROR_NOT_IMPLEMENTED;
@@ -727,7 +719,7 @@ int _ParseDBusMessage(DBusMessage *pMsg, int *pargc, char ***argv)
             dbus_message_iter_get_basic(&iter, &temp);
             if (!temp.str)
             {
-                DEBUG_LOG("%s\n", "no string");
+                DDBG("%s\n", "no string");
                 iRet = TSC_ERROR_INTERNAL;
                 goto clean_up;
             }
@@ -739,7 +731,7 @@ int _ParseDBusMessage(DBusMessage *pMsg, int *pargc, char ***argv)
 
                 if (!(*argv))
                 {
-                    DEBUG_LOG("PARSE message, insufficient: 7-1, argc:%d iSize:%d\n",  argc, iSize);
+                    DDBG("PARSE message, insufficient: 7-1, argc:%d iSize:%d\n",  argc, iSize);
                     iRet = TSC_ERROR_INSUFFICIENT_RES;
                     iSize = iSize - TSC_REPLY_MSG_COUNT_AVERAGE;
                     goto clean_up;
@@ -760,7 +752,7 @@ int _ParseDBusMessage(DBusMessage *pMsg, int *pargc, char ***argv)
 
             if (!(*argv)[argc])
             {
-                DEBUG_LOG("not engough memory: %s\n", "4");
+                DDBG("not engough memory: %s\n", "4");
             	 iRet = TSC_ERROR_INSUFFICIENT_RES;
             	 goto clean_up;
             }
@@ -771,7 +763,7 @@ int _ParseDBusMessage(DBusMessage *pMsg, int *pargc, char ***argv)
     }
     else
     {
-        DEBUG_LOG("%s\n", "Request message has no arguments");
+        DDBG("%s\n", "Request message has no arguments");
         *pargc = argc;
         return iRet;
     }
@@ -780,29 +772,24 @@ clean_up:
 
     if (iRet)
     {
-        DEBUG_LOG("ADDRESS to clean:%u\n", *argv);
         //Error code here
     	int i = 0;
-    	for (i = 0; i < iSize; i++)
+    	if (*argv)
     	{
-    		if ((*argv)[i])
-    			free((*argv)[i]);
-    		(*argv)[i] = NULL;
-    	}
-		if (*argv)
+        	for (i = 0; i < iSize; i++)
+        	{
+        		if ((*argv)[i])
+        			free((*argv)[i]);
+        		(*argv)[i] = NULL;
+        	}
 		    free(*argv);
-        *argv = NULL;
+		    *argv = NULL;
+    	}
     }
     else
     {
         // Everything went well till now...
         *pargc = argc;
-        int i = 0;
-
-
-        for (i = 0; i < argc; i++)
-            DEBUG_LOG("thread:%u, argc:%d, i:%d, Parsemessage :msg:%s\n", pthread_self(),argc, i,
-                      (*argv)[i]);
     }
 
     return iRet;
@@ -811,16 +798,15 @@ clean_up:
 
 DBusHandlerResult _IpcServerProcessMessage(void *user_data)
 {
-    DEBUG_LOG("%s\n", "IpcServerProcessMessage");
+    DDBG("%s\n", "IpcServerProcessMessage");
     IpcAsyncInfo *pAsync = user_data;
     DBusError dberr;
-    DBusMessageIter iter;
-    int iSize = TSC_REPLY_MSG_COUNT_AVERAGE;
     char **reply = NULL;
     int iFreeMtdHandle = 0;
     int len = 0;
 //    int iErr = DBUS_HANDLER_RESULT_HANDLED; // Return the result to caller of this function.
     int iRet = TSC_ERROR_MODULE_GENERIC;   // Return as result of method requested by client.
+    IpcMethodHandle *pMtdHandle = NULL;
 
     dbus_error_init(&dberr);
     if (pAsync->pConn == NULL)
@@ -828,7 +814,7 @@ DBusHandlerResult _IpcServerProcessMessage(void *user_data)
         goto clean_up;
     }
     // Here when calling method, pass the callback function
-    IpcMethodHandle *pMtdHandle = calloc(1, sizeof(IpcMethodHandle));
+    pMtdHandle = calloc(1, sizeof(IpcMethodHandle));
 
     if (pMtdHandle == NULL)
     {
@@ -854,20 +840,14 @@ DBusHandlerResult _IpcServerProcessMessage(void *user_data)
         }
 
         strncpy(pMtdHandle->unique_id, pAsync->async_unique_id, MSGHANDLE_LEN);
-
-        if (pMtdHandle->unique_id == NULL)
-        {
-            DEBUG_LOG("unable to copy unique_id:%u\n", pthread_self());
-            goto clean_up;
-        }
-
+        (pMtdHandle->unique_id)[MSGHANDLE_LEN] = '\0';
 
         pthread_mutex_lock(&pAsync->pInfo->Lock);
         (pAsync->pInfo->count)++;
         pMtdHandle->pNext = pAsync->pInfo->pRunningMethods;
         pAsync->pInfo->pRunningMethods = pMtdHandle;
 /*
-        DEBUG_LOG("============== after adding running method:%s\n", "------");
+        DDBG("============== after adding running method:%s\n", "------");
         IterateList(pMtdHandle);
 */
         pthread_mutex_unlock(&pAsync->pInfo->Lock);
@@ -877,7 +857,7 @@ DBusHandlerResult _IpcServerProcessMessage(void *user_data)
         pMtdHandle->iCancel = TSC_NON_CANCEL;
 
         // Skip the first params which is for unique_id
-        DEBUG_LOG("method to run:%s, argv[0]:%s\n", pAsync->pMethod->szMethod, pAsync->argv[0]);
+        DDBG("method to run:%s, argv[0]:%s\n", pAsync->pMethod->szMethod, pAsync->argv[0]);
 
         iRet = (pAsync->pMethod)->method((pAsync->pMethod)->pData, pAsync->argc - 1,
                                          &(pAsync->argv[1]), &reply, &len,
@@ -907,7 +887,7 @@ clean_up:
         {
             *pmpPrev = (*pmpPrev)->pNext;
             iFreeMtdHandle = 1;
-            DEBUG_LOG("FOUND method, and remove from running one, method:%s, uniquid:%s\n",
+            DDBG("FOUND method, and remove from running one, method:%s, uniquid:%s\n",
                       pAsync->pMethod->szMethod, pAsync->async_unique_id);
             IterateList(pAsync->pInfo->pRunningMethods);
             break;
@@ -919,8 +899,6 @@ clean_up:
     CleanupAsync(pAsync);
     dbus_error_free(&dberr);
 
-    DEBUG_LOG(">>>>> after search, mtdHandleId:%s, iFreeFlag:%d, thread:%u, pMtdHandle:%u\n",
-              pMtdHandle->unique_id, iFreeMtdHandle, pthread_self(), pMtdHandle);
     if (pMtdHandle && iFreeMtdHandle)
     {
         free(pMtdHandle);
@@ -933,7 +911,7 @@ clean_up:
 void *_IpcPopMessage(void *hServer)
 {
     IpcServerInfo *pInfo = (IpcServerInfo *) hServer;
-    DEBUG_LOG("=IpcPopMessage:%s\n", pInfo->name);
+    DDBG("=IpcPopMessage:%s\n", pInfo->name);
     int iRet = 0;
 
     while (pInfo != NULL && pInfo->pConn != NULL && pInfo->start_server_flag) {
@@ -967,13 +945,12 @@ void *_IpcPopMessage(void *hServer)
                 {
                     iRet = snprintf(pAsync->async_unique_id, MSGHANDLE_LEN, TSC_MID_SVR_FORMAT, pAsync->argv[0],
                                                        dbus_message_get_serial(pAsync->pMsg));
-                    //DEBUG_LOG("ASYNC_UNQIEU-DI: %s\n", pAsync->async_unique_id);
+                    //DDBG("ASYNC_UNQIEU-DI: %s\n", pAsync->async_unique_id);
                     if (iRet < 0)
                         break;
 
-                    pthread_t lthread;
                     iRet = _RunDetachedThread(_IpcServerMsgHandler, pAsync);
-                    DEBUG_LOG("====RunDetachedThread ret:%d\n", iRet);
+                    DDBG("====RunDetachedThread ret:%d\n", iRet);
                 }
 
                 if (iRet)
@@ -985,7 +962,7 @@ void *_IpcPopMessage(void *hServer)
         	}
         }
     }
-    DEBUG_LOG("popmessage ended :%s\n", "============");
+    DDBG("popmessage ended :%s\n", "============");
 
     return NULL;
 }
@@ -1035,7 +1012,7 @@ int IpcServerCallbackMethod(TSC_METHOD_HANDLE *pMHandle, TSC_METHOD_REASON_CODE 
         if (p_MHandle->iCancel == TSC_IS_CANCEL)
         {
             iRet = 0;
-            DEBUG_LOG("%s", "callback check, it is cancel true\n");
+            DDBG("%s", "callback check, it is cancel true\n");
         }
         pthread_mutex_unlock(&(p_MHandle->Lock));
     }
@@ -1060,11 +1037,11 @@ int IpcCancelMethod(void *pData, int argc, char **argv, char ***szReply, int *le
     int ret = 0;
     if (argc > 0)
     {
-        DEBUG_LOG("IpcCancelMethod unique_id %s\n", argv[0]);
+        DDBG("IpcCancelMethod unique_id %s\n", argv[0]);
     }
     else
     {
-        DEBUG_LOG("%s\n", "Error params in cancel method");
+        DDBG("%s\n", "Error params in cancel method");
     }
 
     //TODO :error checking
@@ -1082,13 +1059,13 @@ int IpcCancelMethod(void *pData, int argc, char **argv, char ***szReply, int *le
 
     for (pmpPrev = &(pInfo->pRunningMethods); *pmpPrev; pmpPrev = &((*pmpPrev)->pNext))
     {
-        DEBUG_LOG("Method to cancel: %s, list method:%s\n", argv[0], (*pmpPrev)->unique_id);
+        DDBG("Method to cancel: %s, list method:%s\n", argv[0], (*pmpPrev)->unique_id);
         if (strcmp((*pmpPrev)->unique_id, argv[0]) == 0)
         {
-            DEBUG_LOG("%s\n", "found the running method to cancel");
+            DDBG("%s\n", "found the running method to cancel");
             pthread_mutex_lock(&(pMHandle->Lock));
             (*pmpPrev)->iCancel = TSC_IS_CANCEL;
-            DEBUG_LOG("%s %s\n", "set is cancel to true for this method: ", (*pmpPrev)->unique_id);
+            DDBG("%s %s\n", "set is cancel to true for this method: ", (*pmpPrev)->unique_id);
             //TODO: should we return something?
             *len = 1;
             *szReply = calloc(1, sizeof(char*) *(*len));
@@ -1099,7 +1076,7 @@ int IpcCancelMethod(void *pData, int argc, char **argv, char ***szReply, int *le
     }
     pthread_mutex_unlock(&(pInfo->Lock));
 
-    DEBUG_LOG("%s\n", "END OF cancel method");
+    DDBG("%s\n", "END OF cancel method");
     return ret;
 }
 
@@ -1108,7 +1085,7 @@ int IpcCancelMethod(void *pData, int argc, char **argv, char ***szReply, int *le
 int
 IpcGetProgressMethod(void *pData, int argc, char **argv, char ***szReply, int *len, CALLBACKFUNC callback, TSC_METHOD_HANDLE *handle)
 {
-    DEBUG_LOG("%s\n", "IpcGetProgressMethod");
+    DDBG("%s\n", "IpcGetProgressMethod");
     IpcMethodHandle *pMHandle = (IpcMethodHandle*) handle;
     IpcServerInfo *pInfo = (IpcServerInfo*) pMHandle->pInfo;
 
@@ -1117,15 +1094,15 @@ IpcGetProgressMethod(void *pData, int argc, char **argv, char ***szReply, int *l
     IpcMethodHandle **pmpPrev;
     for (pmpPrev = &(pInfo->pRunningMethods); *pmpPrev; pmpPrev = &((*pmpPrev)->pNext))
     {
-        DEBUG_LOG("running methods unique id :%s,  passing id :%s \n", (*pmpPrev)->unique_id, argv[0]);
+        DDBG("running methods unique id :%s,  passing id :%s \n", (*pmpPrev)->unique_id, argv[0]);
 
         if (!strcmp((*pmpPrev)->unique_id, argv[0]))
         {
-            DEBUG_LOG("=== found running method to get progress\n", argv[0]);
+            DDBG("=== found running method to get progress %s\n", argv[0]);
             // get the running method, update its status
             *len = 1;
             *szReply = calloc(1, sizeof(char*) * 10);
-            DEBUG_LOG("-- status to reply :%s\n",(*pmpPrev)->cStatus);
+            DDBG("-- status to reply :%s\n",(*pmpPrev)->cStatus);
             (*szReply)[0] = strdup((*pmpPrev)->cStatus);
             break;
         }
@@ -1136,85 +1113,91 @@ IpcGetProgressMethod(void *pData, int argc, char **argv, char ***szReply, int *l
 int
 IpcShutdown(void *pData, int argc, char **argv, char ***szReply, int *len, CALLBACKFUNC callback, TSC_METHOD_HANDLE *handle)
 {
-    DEBUG_LOG("==============%s\n", "IpcShutdownMethod");
+    DDBG("==============%s\n", "IpcShutdownMethod");
     IpcMethodHandle *pMHandle = (IpcMethodHandle*) handle;
     IpcServerInfo *pInfo = (IpcServerInfo*) pMHandle->pInfo;
 
     pthread_mutex_lock(&(pInfo->Lock));
     pInfo->start_server_flag = false;
     pthread_mutex_unlock(&(pInfo->Lock));
-    DEBUG_LOG("end of shutdown:%s\n", "===================");
+    DDBG("end of shutdown:%s\n", "===================");
     return 0;
 }
 
 
 void FreeIpcServerHandle(TSC_SERVER_HANDLE hServer)
 {
-    DEBUG_LOG("%s\n", "FreeIpcServerHandle");
+    DDBG("%s\n", "FreeIpcServerHandle");
     IpcServerInfo *pInfo = (IpcServerInfo*) hServer;
 
-    // Free MethodList
-    IpcServerMethodList *pCurr = pInfo->pMethodList;
-    IpcServerMethodList *pPrev;
-
-    while (pCurr)
-    {
-        pPrev = pCurr;
-        pCurr = pCurr->pNext;
-        DEBUG_LOG("*****pPrev method is 0 :%s\n", pPrev->pMethod->szMethod);
-
-        if (pPrev)
-        {
-            if (pPrev->pMethod)
-            {
-                if (pPrev->pMethod->method == (METHODFUNC) IpcCancelMethod
-                        || pPrev->pMethod->method == (METHODFUNC) IpcGetProgressMethod
-                        || pPrev->pMethod->method == (METHODFUNC) IpcShutdown)
-                    free(pPrev->pMethod);
-
-                pPrev->pMethod = NULL;
-            }
-            if (pPrev->pNext)
-            {
-                pPrev->pNext = NULL;
-            }
-            free(pPrev);
-            pPrev = NULL;
-        }
-    }
-
-    pInfo->pMethodList = NULL;
-
-    pInfo->pRunningMethods = NULL;
-
-    if (pInfo->pHandlePool)
-        IpcThrPoolFree(&pInfo->pHandlePool);
-
-    pthread_mutex_destroy(&(pInfo->Lock));
-
-    if (pInfo->pTable)
-        free(pInfo->pTable);
-    pInfo->pTable = NULL;
-
-    if (pInfo->pConn)
-    {
-        DBusError dberr;
-        dbus_error_init(&dberr);
-
-        dbus_connection_remove_filter(pInfo->pConn, _IpcServerMsgFilter, pInfo);
-        dbus_connection_unregister_object_path(pInfo->pConn, TSC_DBUS_PATH);
-        dbus_bus_remove_match(pInfo->pConn, pInfo->rule, &dberr);
-
-        dbus_bus_release_name(pInfo->pConn, TSC_DBUS_SERVER, &dberr);
-
-        dbus_connection_unref(pInfo->pConn);
-        dbus_error_free(&dberr);
-    }
-    pInfo->pConn = NULL;
-
     if (pInfo)
+    {
+        pthread_mutex_lock(&(pInfo->Lock));
+        // Free MethodList
+        IpcServerMethodList *pCurr = pInfo->pMethodList;
+        IpcServerMethodList *pPrev;
+
+        while (pCurr)
+        {
+            pPrev = pCurr;
+            pCurr = pCurr->pNext;
+            DDBG("*****pPrev method is 0 :%s\n", pPrev->pMethod->szMethod);
+
+            if (pPrev)
+            {
+                if (pPrev->pMethod)
+                {
+                    if (pPrev->pMethod->method == (METHODFUNC) IpcCancelMethod
+                            || pPrev->pMethod->method == (METHODFUNC) IpcGetProgressMethod
+                            || pPrev->pMethod->method == (METHODFUNC) IpcShutdown)
+                    {
+                    	free(pPrev->pMethod);
+                    }
+                    pPrev->pMethod = NULL;
+                }
+                if (pPrev->pNext)
+                {
+                	pPrev->pNext = NULL;
+                }
+
+                free(pPrev);
+                pPrev = NULL;
+            }
+        }
+
+        pInfo->pMethodList = NULL;
+        pInfo->pRunningMethods = NULL;
+
+        if (pInfo->pHandlePool)
+            IpcThrPoolFree(&pInfo->pHandlePool);
+
+        pthread_mutex_unlock(&(pInfo->Lock));
+
+        pthread_mutex_destroy(&(pInfo->Lock));
+
+        if (pInfo->pTable)
+            free(pInfo->pTable);
+        pInfo->pTable = NULL;
+
+        if (pInfo->pConn)
+        {
+            DBusError dberr;
+            dbus_error_init(&dberr);
+
+            dbus_connection_remove_filter(pInfo->pConn, _IpcServerMsgFilter, pInfo);
+            dbus_connection_unregister_object_path(pInfo->pConn, TSC_DBUS_PATH);
+            dbus_bus_remove_match(pInfo->pConn, pInfo->rule, &dberr);
+
+            dbus_bus_release_name(pInfo->pConn, TSC_DBUS_SERVER, &dberr);
+
+            dbus_connection_unref(pInfo->pConn);
+            dbus_error_free(&dberr);
+        }
+        pInfo->pConn = NULL;
+
         free(pInfo);
-    pInfo = NULL;
+        pInfo = NULL;
+    }
 }
 
 

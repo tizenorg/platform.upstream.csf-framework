@@ -160,7 +160,7 @@ void RemoveEngine()
     if (pszRoot != NULL)
     {
         char szCommand[1024];
-        sprintf(&szCommand, "rm -f /opt/usr/share/sec_plugin/libwpengine.so");
+        sprintf(szCommand, "rm -f /opt/usr/share/sec_plugin/libwpengine.so");
         CallSys(szCommand);
     }
 }

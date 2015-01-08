@@ -1245,7 +1245,7 @@ static void TWPCheckURL_0005(void)
     int iRiskLevel;
 
     RemoveEngine();
-    TEST_ASSERT(TWPCheckURL(INVALID_TWPLIB_HANDLE, URL_0_0, pBlkUrl, &uBlkUrlLen, &iRiskLevel) != TWP_SUCCESS);
+    TEST_ASSERT(TWPCheckURL(INVALID_TWPLIB_HANDLE, URL_0_0, &pBlkUrl, &uBlkUrlLen, &iRiskLevel) != TWP_SUCCESS);
     RestoreEngine();
     TESTCASEDTOR(&TestCtx);
 }
@@ -1311,7 +1311,7 @@ static void TWPGetInfo_0001(void)
     Init.memfreefunc = free;
     TEST_ASSERT((hLib = TWPInitLibrary(&Init)) != INVALID_TWPLIB_HANDLE);
     char szMetaInfo[TWP_META_MAX];
-    TEST_ASSERT(TWPGetInfo(hLib, &szMetaInfo) == TWP_SUCCESS);
+    TEST_ASSERT(TWPGetInfo(hLib, szMetaInfo) == TWP_SUCCESS);
     TEST_ASSERT(strlen(szMetaInfo) > 0);
     TWPUninitLibrary(hLib);
 
@@ -1324,7 +1324,7 @@ static void TWPGetInfo_0002(void)
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     char szMetaInfo[TWP_META_MAX];
-    TEST_ASSERT(TWPGetInfo(INVALID_TWPLIB_HANDLE, &szMetaInfo) == TWP_INVALID_PARAMETER);
+    TEST_ASSERT(TWPGetInfo(INVALID_TWPLIB_HANDLE, szMetaInfo) == TWP_INVALID_PARAMETER);
 
     TESTCASEDTOR(&TestCtx);
 }

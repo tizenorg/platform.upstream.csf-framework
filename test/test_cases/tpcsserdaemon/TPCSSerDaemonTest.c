@@ -68,7 +68,7 @@ UpdateList(void *pData, int argc, char **argv, char ***szReply, int *len, CALLBA
 /* Test cases. */
 static void TSCStartup(void);
 static void TSCCleanup(void);
-static void TestCases(void);
+//static void TestCases(void);
 
 /**
  *  Plugin Control Service Test Cases BEGIN
@@ -107,7 +107,7 @@ static void TPCS_SetActivePlugin_002(void);
 static void TPCS_SetActivePlugin_003(void);
 static void TPCS_SetActivePluginSync_001(void);
 static void TPCS_SetActivePluginAsync_001(void);
-static void TPCS_ShutDown_IPC_001(void);
+//static void TPCS_ShutDown_IPC_001(void);
 
 static void TPCSTestCases(void);
 
@@ -138,7 +138,6 @@ static void TPCSTestCases(void)
     TPCS_GetPluginInfo_001();
 #endif
 #if 1
-
     TPCS_GetPluginInfo_002();
     TPCS_GetPluginInfo_003();
     TPCS_GetPluginInfo_004();
@@ -146,7 +145,6 @@ static void TPCSTestCases(void)
     TPCS_GetPluginInfo_006();
     TPCS_GetPluginInfoSync_001();
 	TPCS_GetPluginInfoAsync_001();
-
 #endif
 #if 1
     TPCS_InstallPlugin_001();
@@ -216,7 +214,7 @@ static void TPCS_GetPluginInfo_001(void)
     WriteToFileFromMemory(CONFIG_TEST_NORMAL, CONFIG_FILE_W_PATH);
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 0;
@@ -227,21 +225,21 @@ static void TPCS_GetPluginInfo_001(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
     pid_t pidStub = 0;
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
 
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_GETINFO_PLUGIN, req_argc, req_argv, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_GETINFO_PLUGIN, req_argc, req_argv, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 2);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
     TEST_ASSERT(strncmp(rep_argv[1], (const char*)CONFIG_TEST_NORMAL, rep_argc) == 0);
     xmlChar *data;
     int size;
@@ -252,7 +250,7 @@ static void TPCS_GetPluginInfo_001(void)
     TESTCASEDTOR(&TestCtx);
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 /**
@@ -274,7 +272,7 @@ static void TPCS_GetPluginInfo_002(void)
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 0;
@@ -285,19 +283,19 @@ static void TPCS_GetPluginInfo_002(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_GETINFO_PLUGIN, req_argc, req_argv, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_GETINFO_PLUGIN, req_argc, req_argv, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 2);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
     TEST_ASSERT(strncmp(rep_argv[1], (const char*)CONFIG_FILE_NEW, rep_argc) == 0);
 
 
@@ -313,7 +311,7 @@ static void TPCS_GetPluginInfo_002(void)
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
     return;
 }
@@ -336,7 +334,7 @@ static void TPCS_GetPluginInfo_003(void)
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 0;
@@ -347,19 +345,19 @@ static void TPCS_GetPluginInfo_003(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_GETINFO_PLUGIN, req_argc, req_argv, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_GETINFO_PLUGIN, req_argc, req_argv, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 2);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
     TEST_ASSERT(strncmp(rep_argv[1], (const char*)CONFIG_DEFAULT_STRING, rep_argc) == 0);
 
 
@@ -375,7 +373,7 @@ static void TPCS_GetPluginInfo_003(void)
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
     return;
 }
@@ -398,7 +396,7 @@ static void TPCS_GetPluginInfo_004(void)
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 0;
@@ -409,20 +407,20 @@ static void TPCS_GetPluginInfo_004(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_GETINFO_PLUGIN,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_GETINFO_PLUGIN,
                               req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT);
 
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 2);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
     TEST_ASSERT(strncmp(rep_argv[1], (const char*)CONFIG_DEFAULT_STRING, rep_argc) == 0);
 
     FILE *pfConf = fopen(CONFIG_FILE_NEW_W_PATH, "r");
@@ -437,7 +435,7 @@ static void TPCS_GetPluginInfo_004(void)
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
     return;
 
@@ -467,7 +465,7 @@ static void TPCS_GetPluginInfo_005()
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 0;
@@ -478,20 +476,20 @@ static void TPCS_GetPluginInfo_005()
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_GETINFO_PLUGIN,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_GETINFO_PLUGIN,
                               req_argc, req_argv, &rep_argc, &rep_argv, DEF_TIMEOUT);
 
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 2);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
     TEST_ASSERT(strncmp(rep_argv[1], (const char*)CONFIG_DEFAULT_STRING, rep_argc) == 0);
 
 
@@ -507,7 +505,7 @@ static void TPCS_GetPluginInfo_005()
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
     return;
 
@@ -546,7 +544,7 @@ static void TPCS_GetPluginInfo_006(void)
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 0;
@@ -557,19 +555,19 @@ static void TPCS_GetPluginInfo_006(void)
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_GETINFO_PLUGIN, req_argc, req_argv, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_GETINFO_PLUGIN, req_argc, req_argv, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 2);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
     TEST_ASSERT(strncmp(rep_argv[1], (const char*)CONFIG_DEFAULT_STRING, rep_argc) == 0);
 
 
@@ -586,7 +584,7 @@ static void TPCS_GetPluginInfo_006(void)
 
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
     return;
 
@@ -606,14 +604,14 @@ static void TPCS_GetPluginInfoSync_001()
 
     int i;
 
-    IpcClientInfo *pInfo = NULL;
-    pInfo = IpcClientOpen();
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
+    hIpc = IpcClientOpen();
 
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
     sleep(1);
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -625,7 +623,7 @@ static void TPCS_GetPluginInfoSync_001()
         methods[i].isAsync = 0;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
 
     for (i = 0; i < TIMES; i++)
@@ -635,7 +633,7 @@ static void TPCS_GetPluginInfoSync_001()
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 
     TerminateProcess(pidStub);
 
@@ -651,15 +649,15 @@ static void TPCS_GetPluginInfoAsync_001()
 
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
     int i;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -671,7 +669,7 @@ static void TPCS_GetPluginInfoAsync_001()
         methods[i].isAsync = 1;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
 
     for (i = 0; i < TIMES; i++)
@@ -681,7 +679,7 @@ static void TPCS_GetPluginInfoAsync_001()
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 
     TerminateProcess(pidStub);
 
@@ -705,7 +703,7 @@ static void TPCS_InstallPlugin_001()
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 1;
@@ -717,26 +715,26 @@ static void TPCS_InstallPlugin_001()
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_INSTALL_PLUGIN, req_argc, req_argv, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_INSTALL_PLUGIN, req_argc, req_argv, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 2);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
     TEST_ASSERT(HasNode(XPATH_PLUGINS_PLUG, APP_ID_SAMPLE_2) == 0);
     TEST_ASSERT(HasNode(XPATH_ACTIVE_PLUGIN, APP_ID_SAMPLE_2) == 0);
 
     TESTCASEDTOR(&TestCtx);
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
@@ -760,7 +758,7 @@ static void TPCS_InstallPlugin_002()
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args 1
     int req_argc = 1;
@@ -772,18 +770,18 @@ static void TPCS_InstallPlugin_002()
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_INSTALL_PLUGIN, req_argc, req_argv, &rep_argc,
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_INSTALL_PLUGIN, req_argc, req_argv, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 2);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
     TEST_ASSERT(HasNode(XPATH_PLUGINS_PLUG, APP_ID_SAMPLE_1) == 0);
     CleanupReply(&rep_argv, &rep_argc);
 
@@ -792,16 +790,14 @@ static void TPCS_InstallPlugin_002()
     int req_argc_1 = 1;
     char *req_argv_1[] = {};
     req_argv_1[0] = strdup((const char*) APP_ID_SAMPLE_2);
-    int iResult_1 = -1;
 
-
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_INSTALL_PLUGIN, req_argc_1, req_argv_1, &rep_argc,
-                              &rep_argv, DEF_TIMEOUT);
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_INSTALL_PLUGIN,
+                              req_argc_1, req_argv_1, &rep_argc, &rep_argv, DEF_TIMEOUT);
 
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 2);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
     TEST_ASSERT(HasNode(XPATH_PLUGINS_PLUG, APP_ID_SAMPLE_2) == 0);
     CleanupReply(&rep_argv, &rep_argc);
 
@@ -810,14 +806,14 @@ static void TPCS_InstallPlugin_002()
     char *req_argv_2[] = {};
     req_argv_2[0] = strdup((const char*) "IpcShutdown");
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_SHUTDOWN_IPC, req_argc_2, req_argv_2, &rep_argc,
-                              &rep_argv, DEF_TIMEOUT);
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_SHUTDOWN_IPC, req_argc_2,
+                              req_argv_2, &rep_argc, &rep_argv, DEF_TIMEOUT);
     CleanupReply(&rep_argv, &rep_argc);
 
     TESTCASEDTOR(&TestCtx);
     // Cleanup - On both success and failure.
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 }
 
@@ -839,7 +835,7 @@ static void TPCS_InstallPlugin_003()
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 1;
@@ -851,41 +847,41 @@ static void TPCS_InstallPlugin_003()
     int req_argc_1 = 1;
     char *req_argv_1[] = {};
     req_argv_1[0] = strdup((const char*) APP_ID_SAMPLE_1);
-    int iResult_1 = -1;
+
     //Response argc
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_INSTALL_PLUGIN, req_argc, req_argv, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_INSTALL_PLUGIN, req_argc, req_argv, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 2);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
     TEST_ASSERT(HasNode(XPATH_PLUGINS_PLUG, APP_ID_SAMPLE_1) == 0);
 
     system("exec rm -r /opt/usr/apps/u7097a278m/lib/plugin/*");
     system("exec cp  /opt/usr/apps/u7097a278m/lib/u709v4.2.1.so  /opt/usr/apps/u7097a278m/lib/plugin/");
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_INSTALL_PLUGIN, req_argc_1, req_argv_1, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_INSTALL_PLUGIN, req_argc_1, req_argv_1, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
 
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 2);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
     TEST_ASSERT(HasNode(XPATH_PLUGINS_PLUG, APP_ID_SAMPLE_1) == 0);
 
     TESTCASEDTOR(&TestCtx);
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 
 
@@ -924,7 +920,7 @@ static void TPCS_InstallPlugin_006()
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 1;
@@ -936,26 +932,26 @@ static void TPCS_InstallPlugin_006()
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_INSTALL_PLUGIN, req_argc, req_argv, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_INSTALL_PLUGIN, req_argc, req_argv, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 1);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_FAILURE, sizeof(RETURN_FAILURE)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_FAILURE) == 0);
 
     TEST_ASSERT(HasNode(XPATH_PLUGINS_PLUG, APP_ID_NO_EXIST) == -1);
 
     TESTCASEDTOR(&TestCtx);
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 
 }
@@ -1030,8 +1026,8 @@ static void TPCS_InstallPluginSync_001()
 
     int i;
 
-    IpcClientInfo *pInfo = NULL;
-    pInfo = IpcClientOpen();
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
+    hIpc = IpcClientOpen();
 
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
@@ -1039,7 +1035,7 @@ static void TPCS_InstallPluginSync_001()
     sleep(1);
 
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -1051,7 +1047,7 @@ static void TPCS_InstallPluginSync_001()
         methods[i].isAsync = 0;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
 
     for (i = 0; i < TIMES; i++)
@@ -1061,7 +1057,7 @@ static void TPCS_InstallPluginSync_001()
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 
     TerminateProcess(pidStub);
 
@@ -1077,15 +1073,15 @@ static void TPCS_InstallPluginAsync_001()
 
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
     int i;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -1097,7 +1093,7 @@ static void TPCS_InstallPluginAsync_001()
         methods[i].isAsync = 1;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
 
     for (i = 0; i < TIMES; i++)
@@ -1107,7 +1103,7 @@ static void TPCS_InstallPluginAsync_001()
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 
     TerminateProcess(pidStub);
 
@@ -1139,7 +1135,7 @@ static void TPCS_UninstallPlugin_001()
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 1;
@@ -1151,19 +1147,20 @@ static void TPCS_UninstallPlugin_001()
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_UNINSTALL_PLUGIN, req_argc, req_argv, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_UNINSTALL_PLUGIN, req_argc, req_argv, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 1);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
+    TEST_ASSERT(HasNode(XPATH_PLUGINS_PLUG, APP_ID_SAMPLE_1) != 0);
 
     // Cleanup - On both success and failure.
 
@@ -1171,14 +1168,14 @@ static void TPCS_UninstallPlugin_001()
     char *req_argv_1[] = {};
     req_argv_1[0] = strdup((const char*) "IpcShutdown");
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_SHUTDOWN_IPC, req_argc_1, req_argv_1, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_SHUTDOWN_IPC, req_argc_1, req_argv_1, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
 
     sleep(1);
     CleanupReply(&rep_argv, &rep_argc);
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
     TerminateProcess(pidStub);
 
 }
@@ -1222,8 +1219,8 @@ static void TPCS_UninstallPluginSync_001(void)
 
     int i;
 
-    IpcClientInfo *pInfo = NULL;
-    pInfo = IpcClientOpen();
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
+    hIpc = IpcClientOpen();
 
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
@@ -1231,7 +1228,7 @@ static void TPCS_UninstallPluginSync_001(void)
     sleep(2);
 
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -1243,7 +1240,7 @@ static void TPCS_UninstallPluginSync_001(void)
         methods[i].isAsync = 0;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
 
     for (i = 0; i < TIMES; i++)
@@ -1253,7 +1250,7 @@ static void TPCS_UninstallPluginSync_001(void)
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 
     TerminateProcess(pidStub);
 
@@ -1269,15 +1266,15 @@ static void TPCS_UninstallPluginAsync_001(void)
 
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
     int i;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -1289,7 +1286,7 @@ static void TPCS_UninstallPluginAsync_001(void)
         methods[i].isAsync = 1;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
 
     for (i = 0; i < TIMES; i++)
@@ -1299,7 +1296,7 @@ static void TPCS_UninstallPluginAsync_001(void)
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 
     TerminateProcess(pidStub);
 
@@ -1319,8 +1316,8 @@ static void TPCS_SetActivePluginSync_001(void)
 
     int i;
 
-    IpcClientInfo *pInfo = NULL;
-    pInfo = IpcClientOpen();
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
+    hIpc = IpcClientOpen();
 
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
@@ -1328,7 +1325,7 @@ static void TPCS_SetActivePluginSync_001(void)
     sleep(2);
 
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -1340,7 +1337,7 @@ static void TPCS_SetActivePluginSync_001(void)
         methods[i].isAsync = 0;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
 
     for (i = 0; i < TIMES; i++)
@@ -1350,12 +1347,13 @@ static void TPCS_SetActivePluginSync_001(void)
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 
     TerminateProcess(pidStub);
 
 
 }
+
 static void TPCS_SetActivePluginAsync_001(void)
 {
 #if defined(TIMES)
@@ -1366,15 +1364,15 @@ static void TPCS_SetActivePluginAsync_001(void)
 
     TestCase TestCtx;
     pid_t pidStub = 0;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
     int i;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
     ConTestContext ConCtxs[TIMES];
     pthread_t Threads[TIMES];
@@ -1386,7 +1384,7 @@ static void TPCS_SetActivePluginAsync_001(void)
         methods[i].isAsync = 1;
     }
 
-    ConSendMessage(&TestCtx, pInfo, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
+    ConSendMessage(&TestCtx, hIpc, ConCtxs, Threads, TIMES, methods, DEF_TIMEOUT);
 
 
     for (i = 0; i < TIMES; i++)
@@ -1396,21 +1394,21 @@ static void TPCS_SetActivePluginAsync_001(void)
 
     TESTCASEDTOR(&TestCtx);
 
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 
     TerminateProcess(pidStub);
 
 
 }
 
-
+/*
 static void TPCS_ShutDown_IPC_001()
 {
     return;
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 1;
@@ -1422,29 +1420,28 @@ static void TPCS_ShutDown_IPC_001()
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_SHUTDOWN_IPC, req_argc, req_argv, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_SHUTDOWN_IPC, req_argc, req_argv, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 1);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
 
 
     TESTCASEDTOR(&TestCtx);
     // Cleanup - On both success and failure.
     CleanupReply(&rep_argv, &rep_argc);
-    IpcClientClose(pInfo);
-
-
-
+    IpcClientClose(hIpc);
 }
+*/
+
 /**
  * normal case, appId, update config.xml, verify the symbolic link with the new one
  */
@@ -1458,12 +1455,12 @@ static void TPCS_SetActivePlugin_001()
         int status = remove(CONFIG_FILE_NEW_W_PATH);
         TEST_ASSERT(status == 0);
     }
-    WriteToFileFromMemory(CONFIG_TEST_NORMAL, CONFIG_FILE_W_PATH);
+//    WriteToFileFromMemory(CONFIG_TEST_NORMAL, CONFIG_FILE_W_PATH);
 
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 1;
@@ -1475,31 +1472,31 @@ static void TPCS_SetActivePlugin_001()
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_SETACTIVE_PLUGIN, req_argc, req_argv, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_SETACTIVE_PLUGIN, req_argc, req_argv, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 1);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_SUCCESS, sizeof(RETURN_SUCCESS)) == 0);
-    //TEST_ASSERT(HasNode(XPATH_ACTIVE_PLUGIN, APP_ID_SAMPLE_1) == 0);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
+    TEST_ASSERT(HasNode(XPATH_ACTIVE_PLUGIN, APP_ID_SAMPLE_1) == 0);
 
 
     int req_argc_1 = 1;
     char *req_argv_1[] = {};
     req_argv_1[0] = strdup((const char*) "IpcShutdown");
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_SHUTDOWN_IPC, req_argc_1, req_argv_1, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_SHUTDOWN_IPC, req_argc_1, req_argv_1, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     CleanupReply(&rep_argv, &rep_argc);
     sleep(1);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 
     TESTCASEDTOR(&TestCtx);
 
@@ -1526,7 +1523,7 @@ static void TPCS_SetActivePlugin_002()
     pid_t pidStub = 0;
 
     TestCase TestCtx;
-    IpcClientInfo *pInfo = NULL;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
 
     //Request args
     int req_argc = 1;
@@ -1538,31 +1535,31 @@ static void TPCS_SetActivePlugin_002()
     int rep_argc = 0;
     char **rep_argv = NULL;
 
-    pInfo = IpcClientOpen();
+    hIpc = IpcClientOpen();
 
     TESTCASECTOR(&TestCtx, __FUNCTION__);
     pidStub = StartTPCSServerStub();
 
-    TEST_ASSERT(pInfo != NULL);
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_SETACTIVE_PLUGIN, req_argc, req_argv, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_SETACTIVE_PLUGIN, req_argc, req_argv, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     TEST_ASSERT(iResult == 0);
 
     TEST_ASSERT(rep_argc == 1);
-    TEST_ASSERT(strncmp(rep_argv[0], RETURN_FAILURE, sizeof(RETURN_FAILURE)) == 0);
-    TEST_ASSERT(HasNode(XPATH_ACTIVE_PLUGIN, APP_ID_NO_EXIST) == -1);
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_FAILURE) == 0);
+    TEST_ASSERT(HasNode(XPATH_ACTIVE_PLUGIN, ACTIVE_NONE) == 0);
 
 
     int req_argc_1 = 1;
     char *req_argv_1[] = {};
     req_argv_1[0] = strdup((const char*) "IpcShutdown");
 
-    iResult = TSCSendMessageN(pInfo, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_SHUTDOWN_IPC, req_argc_1, req_argv_1, &rep_argc,
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_SHUTDOWN_IPC, req_argc_1, req_argv_1, &rep_argc,
                               &rep_argv, DEF_TIMEOUT);
     CleanupReply(&rep_argv, &rep_argc);
     sleep(1);
-    IpcClientClose(pInfo);
+    IpcClientClose(hIpc);
 
     TESTCASEDTOR(&TestCtx);
 
@@ -1571,10 +1568,68 @@ static void TPCS_SetActivePlugin_002()
 }
 
 /**
- * other failure case, similar
+ * if passing is null, should disable the active plugin
  */
 static void TPCS_SetActivePlugin_003()
 {
+    //prepare normal case, config.xml exists, config.xml.new not exist.
+    FILE *fNew = fopen(CONFIG_FILE_NEW_W_PATH, "w");
+    if (fNew)
+    {
+        fclose(fNew);
+        int status = remove(CONFIG_FILE_NEW_W_PATH);
+        TEST_ASSERT(status == 0);
+    }
+    //WriteToFileFromMemory(CONFIG_TEST_NORMAL, CONFIG_FILE_W_PATH);
+
+    pid_t pidStub = 0;
+
+    TestCase TestCtx;
+    TSC_IPC_HANDLE hIpc = INVALID_IPC_HANDLE;
+
+    //Request args
+    int req_argc = 1;
+    char *req_argv[] = {};
+    req_argv[0] = strdup((const char*) APP_ID_NULL);
+    int iResult = -1;
+
+    //Response argc
+    int rep_argc = 0;
+    char **rep_argv = NULL;
+
+    hIpc = IpcClientOpen();
+
+    TESTCASECTOR(&TestCtx, __FUNCTION__);
+    pidStub = StartTPCSServerStub();
+
+    TEST_ASSERT(hIpc != INVALID_IPC_HANDLE);
+
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_METHOD_SETACTIVE_PLUGIN, req_argc, req_argv, &rep_argc,
+                              &rep_argv, DEF_TIMEOUT);
+    TEST_ASSERT(iResult == 0);
+
+    TEST_ASSERT(rep_argc == 1);
+
+    TEST_ASSERT(strcmp(rep_argv[0], RETURN_SUCCESS) == 0);
+    TEST_ASSERT(HasNode(XPATH_ACTIVE_PLUGIN, ACTIVE_NONE) == 0);
+
+
+    int req_argc_1 = 1;
+    char *req_argv_1[] = {};
+    req_argv_1[0] = strdup((const char*) "IpcShutdown");
+
+    iResult = TSCSendMessageN(hIpc, TSC_DBUS_SERVER_PLUGIN_CHANNEL, TPCS_SHUTDOWN_IPC, req_argc_1, req_argv_1, &rep_argc,
+                              &rep_argv, DEF_TIMEOUT);
+    CleanupReply(&rep_argv, &rep_argc);
+
+
+    sleep(1);
+    IpcClientClose(hIpc);
+
+    TESTCASEDTOR(&TestCtx);
+
+
+    TerminateProcess(pidStub);
 
 }
 

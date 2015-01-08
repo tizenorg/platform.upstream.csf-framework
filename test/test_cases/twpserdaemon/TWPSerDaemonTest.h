@@ -36,6 +36,7 @@
 #define TWPGETURLREPUTATIONMETHOD "TWPSerGetURLReputation"
 
 #include <setjmp.h>
+#include "Debug.h"
 #include "IpcClient.h"
 
 #define Test_TWP_Minimal "0"
@@ -66,20 +67,6 @@ extern "C" {
 
 /* Output methods. */
 #define LOG_OUT(fmt, x...) printf("Log:"fmt, ##x)
-
-#if defined(DEBUG)
-#define DEBUG_LOG(_fmt_, _param_...) { \
-                                        FILE *fp = fopen("/tmp/twpserdaemontestlog.txt", "a"); \
-                                        if (fp != NULL) \
-                                        { \
-                                            printf("%s,%d: " _fmt_, __FILE__, __LINE__, ##_param_); \
-                                            fprintf(fp, "%s,%d: " _fmt_, __FILE__, __LINE__, ##_param_); \
-                                            fclose(fp); \
-                                        } \
-                                       }
-#else
-#define DEBUG_LOG(_fmt_, _param_...)
-#endif
 
 #define TRY_TEST { \
     TestCasesCount++; \
@@ -140,7 +127,7 @@ typedef struct ConTestContext_struct
 {
     TestCase *pTestCtx;
     const char *szMethod; /* Server method to be called inside thread. */
-    IpcClientInfo *pInfo;
+    TSC_IPC_HANDLE hIpc;
     int timeout;
     int iCid; /* Concurrency test id. */
 
@@ -152,7 +139,7 @@ typedef struct ConTestContext_struct
 
 typedef struct MethodCall_struct
 {
-    const char *szMethod;
+    char *szMethod;
     int isAsync;  /* 0 = Synchronous; 1 = Asynchronous */
 } MethodCall;
 

@@ -1126,7 +1126,6 @@ static void TCSGetVersion_0001(void)
 
 static void TCSGetVersion_0002(void)
 {
-    TCSLIB_HANDLE hLib = INVALID_TCSLIB_HANDLE;
     TestCase TestCtx;
 
     TESTCASECTOR(&TestCtx, __FUNCTION__, 0, 0, 0, NULL);
@@ -1156,7 +1155,7 @@ static void TCSGetInfo_0001(void)
     TESTCASECTOR(&TestCtx, __FUNCTION__, 0, 0, 0, NULL);
     TEST_ASSERT((hLib = TCSLibraryOpen()) != INVALID_TCSLIB_HANDLE);
     char szMetaInfo[TCS_META_MAX];
-    TEST_ASSERT(TCSGetInfo(hLib, &szMetaInfo) == 0);
+    TEST_ASSERT(TCSGetInfo(hLib, szMetaInfo) == 0);
     TEST_ASSERT(strlen(szMetaInfo) > 0);
     TCSLibraryClose(hLib);
     TESTCASEDTOR(&TestCtx);
@@ -1164,12 +1163,11 @@ static void TCSGetInfo_0001(void)
 
 static void TCSGetInfo_0002(void)
 {
-    TCSLIB_HANDLE hLib = INVALID_TCSLIB_HANDLE;
     TestCase TestCtx;
 
     TESTCASECTOR(&TestCtx, __FUNCTION__, 0, 0, 0, NULL);
     char szMetaInfo[TCS_META_MAX];
-    TEST_ASSERT(TCSGetInfo(INVALID_TCSLIB_HANDLE, &szMetaInfo) == -1);
+    TEST_ASSERT(TCSGetInfo(INVALID_TCSLIB_HANDLE, szMetaInfo) == -1);
     TESTCASEDTOR(&TestCtx);
 }
 

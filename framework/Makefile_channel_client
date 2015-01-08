@@ -62,7 +62,12 @@ else
 endif
 
 # Define a list of pkg-config packages we want to use
-pkg_packages = dbus-glib-1
+
+ifeq ($(TCS_CFG), release)
+	pkg_packages = dbus-glib-1
+else
+	pkg_packages =  dbus-glib-1 dlog
+endif
 
 PKG_CFLAGS  = $(shell pkg-config --cflags $(pkg_packages))
 PKG_LDFLAGS = $(shell pkg-config --libs $(pkg_packages))
@@ -71,7 +76,7 @@ PKG_LDFLAGS = $(shell pkg-config --libs $(pkg_packages))
 LD_FLAGS += $(PKG_LDFLAGS)
 
 GBS_CFLAGS = -I${SYSROOT}/usr/include/dbus-1.0 -I${SYSROOT}/usr/lib/dbus-1.0/include
-CFLAGS   += $(PKCL_CFLAGS) $(TCS_CFLAGS) $(GBS_CFLAGS) $(PKG_CFLAGS)
+CFLAGS   += $(PKCL_CFLAGS) $(TCS_CFLAGS) $(GBS_CFLAGS) $(PKG_CFLAGS) -Wall -Werror
 
 SOURCES = $(SRCDIR)/IpcClient.c	\
 		$(SRCDIR)/IpcStructs.c
