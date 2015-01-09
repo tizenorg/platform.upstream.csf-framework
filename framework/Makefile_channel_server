@@ -75,7 +75,7 @@ PKG_LDFLAGS = $(shell pkg-config --libs $(pkg_packages))
 LD_FLAGS += $(PKG_LDFLAGS)
 
 GBS_CFLAGS = -I${SYSROOT}/usr/include/dbus-1.0 -I${SYSROOT}/usr/lib/dbus-1.0/include
-CFLAGS   += $(PKCL_CFLAGS) $(TCS_CFLAGS) $(GBS_CFLAGS) $(PKG_CFLAGS) -Wall -Werror
+CFLAGS   += $(PKCL_CFLAGS) $(TCS_CFLAGS) $(GBS_CFLAGS) $(PKG_CFLAGS)
 
 SOURCES = $(SRCDIR)/IpcServer.c \
 		$(SRCDIR)/IpcServerError.c \

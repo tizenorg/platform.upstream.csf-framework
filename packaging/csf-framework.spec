@@ -1,6 +1,6 @@
 Summary:       Content Security Framework
 Name:          csf-framework
-Version:       2.0.2
+Version:       2.0.2.1
 Release:       0
 License:       BSD-3-Clause
 Group:         Security/Libraries

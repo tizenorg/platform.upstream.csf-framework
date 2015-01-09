@@ -1,3 +1,6 @@
+* Fri Jan 09 2015 John L. Whiteman <john.l.whiteman@intel.com> upstream/2.0.2.1-6-gda86fc8
+- Coverity fixes for TC-2075.  Makefile changes.
+
 * Thu Aug 14 2014 John L. Whiteman <john.l.whiteman@intel.com> upstream/2.0.2-1-gf74ac25
 - Fixed the HTTP test code for TWP testing per Samsung report
 
