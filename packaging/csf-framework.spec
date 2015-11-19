@@ -19,6 +19,14 @@ BuildRequires: pkgconfig(libxml-2.0)
 %description
 A general purpose content screening and reputation solution.
 
+%package devel
+Summary:  Development files
+Group:    Development/Libraries
+Requires: %name = %version-%release
+
+%description devel
+Development files
+
 %prep
 %setup -q
 cp %{SOURCE1001} .
@@ -28,22 +36,21 @@ cp %{SOURCE1004} .
 cp %{SOURCE1005} .
 
 %build
-cd framework
 
 # Build Framework Library
-make -f Makefile all
+make -C framework -f Makefile all VERSION=%version PREFIX=%_prefix
 
 # Build IPC Client Library
-make -f Makefile_channel_client all
+make -C framework -f Makefile_channel_client all
 
 # Build IPC Server Library
-make -f Makefile_channel_server all
+make -C framework -f Makefile_channel_server all
 
 # Build Plugin Control Service
-make -f Makefile_TPCSSerDaemon all
+make -C framework -f Makefile_TPCSSerDaemon all
 
 # Build Web Protection Control Service
-make -f Makefile_TWPSerDaemon all
+make -C framework -f Makefile_TWPSerDaemon all
 
 %install
 rm -rf %{buildroot}
@@ -51,7 +58,6 @@ mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_libdir}
 mkdir -p %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}/%{_sysconfdir}/dbus-1/system.d
-install -D framework/lib/libsecfw.so %{buildroot}%{_libdir}/
 install -D framework/lib/libscclient.so %{buildroot}%{_libdir}/
 install -D framework/lib/libscserver.so %{buildroot}%{_libdir}/
 install -D framework/bin/TPCSSerDaemon %{buildroot}%{_bindir}/
@@ -60,6 +66,14 @@ install -m0644 %{SOURCE1002} %{buildroot}%{_sysconfdir}/dbus-1/system.d/
 install -m0644 %{SOURCE1003} %{buildroot}%{_sysconfdir}/dbus-1/system.d/
 install -m0644 %{SOURCE1004} %{buildroot}%{_unitdir}
 install -m0644 %{SOURCE1005} %{buildroot}%{_unitdir}
+
+mkdir -p %buildroot%_includedir/csf
+mkdir -p %buildroot%_libdir/pkgconfig
+
+make install -C framework \
+             LIB_DESTDIR=%buildroot%_libdir \
+             HEADER_DESTDIR=%buildroot%_includedir/csf \
+             VERSION=%version
 
 %post
 /sbin/ldconfig
@@ -90,7 +104,7 @@ rm -fr /usr/bin/tpcs_config.xml
 %files
 %manifest %{name}.manifest
 %defattr(-,root,root,-)
-%{_libdir}/libsecfw.so
+%{_libdir}/libsecfw.so.*
 %{_libdir}/libscclient.so
 %{_libdir}/libscserver.so
 %defattr(0755,root,root)
@@ -101,3 +115,10 @@ rm -fr /usr/bin/tpcs_config.xml
 %config %{_sysconfdir}/dbus-1/system.d/com.tsc.ipc.server.wp.conf
 %{_unitdir}/tpcsserdaemon.service
 %{_unitdir}/twpserdaemon.service
+
+%files devel
+%_includedir/csf/TCSErrorCodes.h
+%_includedir/csf/TCSImpl.h
+%_includedir/csf/TWPImpl.h
+%_libdir/pkgconfig/%name.pc
+%_libdir/libsecfw.so

@@ -29,8 +29,11 @@
 #  OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+MAJOR := $(shell echo "$(VERSION)" | awk -F. '{print $$1}')
+NAME := secfw
 OUTDIR = lib
-TARGET = $(OUTDIR)/libsecfw.so
+TARGET = lib$(NAME).so
+TARGET_PC = csf-framework.pc
 SRCDIR = .
 INCLUDE = -I. $(TCS_INC) -I../plugin
 LD_FLAGS := $(LD_FLAGS) -ldl -lpthread $(shell pkg-config --libs libtzplatform-config)
@@ -80,24 +83,49 @@ else
 endif
 
 SOURCES = $(SRCDIR)/TCSImpl.c $(SRCDIR)/TWPImpl.c
-
 OBJECTS = $(OUTDIR)/TCSImpl.o $(OUTDIR)/TWPImpl.o
 
 $(OUTDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CFLAGS) $(PKGCFLAGS) -I. -o $(OUTDIR)/$*.o -c $(SRCDIR)/$*.c
 
-all: $(OUTDIR) $(TARGET)
+$(OUTDIR)/$(TARGET).$(VERSION): $(OBJECTS)
+	$(CC) -shared -Wl,-zdefs,-soname,$(TARGET).$(MAJOR) -o $@ $(OBJECTS) $(LD_FLAGS) $(PKGLD_FLAGS)
 
-$(TARGET): $(OBJECTS)
-	$(CC) -shared -Wl,-zdefs -o $(TARGET) $(OBJECTS) $(LD_FLAGS) $(PKGLD_FLAGS)
+all: $(OUTDIR) $(OUTDIR)/$(TARGET) $(OUTDIR)/${TARGET_PC}
+
+# this symlinks generation is for dependent package (TWPSerDaemon)
+$(OUTDIR)/$(TARGET): $(OUTDIR)/$(TARGET).$(VERSION)
+	ln -s $(TARGET).$(VERSION) $(OUTDIR)/$(TARGET).$(MAJOR)
+	ln -s $(TARGET).$(MAJOR) $(OUTDIR)/$(TARGET)
 
 $(OUTDIR):
 	@mkdir $(OUTDIR)
+
+$(OUTDIR)/$(TARGET_PC): $(OUTDIR/$(TARGET)
+	@ ( \
+		echo 'prefix=$(PREFIX)'; \
+		echo 'libdir=$${prefix}/lib'; \
+		echo 'includedir=$${prefix}/include'; \
+		echo ''; \
+		echo 'Name: csf-framework'; \
+		echo 'Description: Content screening framework'; \
+		echo 'Version: $(VERSION)'; \
+		echo 'Libs: -L$${libdir} -l$(NAME)'; \
+		echo 'Cflags: -I$${includedir}/csf' ) > $@
 
 distclean: clean
 	@rm -rf $(OUTDIR)
 
 clean:
-	@rm -f $(TARGET)
+	@rm -f $(OUTDIR)/*
 	@rm -f $(OBJECTS) *~
 	@rm -f *.bb *.bbg *.da *.gcov
+
+install:
+	install $(OUTDIR)/$(TARGET).$(VERSION) $(LIB_DESTDIR)
+	ln -s $(TARGET).$(VERSION) $(LIB_DESTDIR)/$(TARGET).$(MAJOR)
+	ln -s $(TARGET).$(MAJOR) $(LIB_DESTDIR)/$(TARGET)
+	install -m0644 TCSImpl.h $(HEADER_DESTDIR)
+	install -m0644 TWPImpl.h $(HEADER_DESTDIR)
+	install -m0644 TCSErrorCodes.h $(HEADER_DESTDIR)
+	install -m0644 $(OUTDIR)/$(TARGET_PC) $(LIB_DESTDIR)/pkgconfig
