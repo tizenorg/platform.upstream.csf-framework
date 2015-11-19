@@ -103,6 +103,7 @@ rm -fr /usr/bin/tpcs_config.xml
 
 %files
 %manifest %{name}.manifest
+%license LICENSE
 %defattr(-,root,root,-)
 %{_libdir}/libsecfw.so.*
 %{_libdir}/libscclient.so
