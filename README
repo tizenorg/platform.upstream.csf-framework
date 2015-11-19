@@ -32,6 +32,10 @@
 Install following packages to the rootstrap
 and setup the build environment
 *************************
+dbus (Version 1.6.4)
+dbus-glib (Version 0.100)
+glib (Version 2.32.3)
+gobject (Version 2.32.3)
 dlog (Version 1.0)
 
 Compiling for multiple architectures
@@ -83,3 +87,48 @@ EMULATOR(x86) - use test/scripts/PrepareForEmul.sh
   - make
   - The library can be found at 'lib/libsecfw.so'
 
+  2.2 Building IPC Client library
+  ======================
+  - make -f Makefile_channel_client clean
+  - make -f Makefile_channel_client
+  - The library can be found at 'lib/libscclient.so'
+
+  2.3 Building IPC Server library
+  ======================
+  - make -f Makefile_channel_server clean;
+  - make -f Makefile_channel_server
+  - The library can be found at 'lib/libscserver.so'
+
+  2.4 Building Plugin control service
+  ======================
+  - make -f Makefile_TPCSSerDaemon clean;
+  - make -f Makefile_TPCSSerDaemon
+  - The binary can be found at 'bin/TPCSSerDaemon'
+
+  2.5 Building Web protection control service
+  ======================
+  - make -f Makefile_TWPSerDaemon clean
+  - make -f Makefile_TWPSerDaemon
+  - The binary can be found at 'bin/TWPSerDaemon'
+
+  2.6 Testing Plugin control service
+  ======================
+  -cd test (change your folder to test)
+  -Start the emulator
+  -chmod +x ./scripts/MfeTPCSSerDaemonToEmul.sh
+  -sdb -e shell (make sure you have enough privilege to write or read all folders under /opt/, /usr/bin/ and /tmp)
+  -cd /usr/bin
+  -chmod +x ./Test.sh
+  - ./Test.sh
+  - ./tpcsserdaemontest
+
+  2.7 Testing Web protection control service
+  ======================
+  -cd test (change your folder to test)
+  -Start the emulator
+  -chmod +x ./scripts/MfeTWPSerDaemonToEmul.sh
+  -sdb -e shell (make sure you have enough privilege to write or read all folders under /opt/, /tmp)
+  -cd /usr/bin
+  -chmod +x ./Test.sh
+  - ./Test.sh
+  - ./twpserdaemontest
